@@ -17,6 +17,7 @@ import android.os.Build
 import android.provider.Settings
 import android.view.Gravity
 import android.view.View
+import android.view.WindowInsets
 import android.view.WindowManager
 import android.widget.ImageView
 import androidx.core.app.NotificationCompat
@@ -136,13 +137,13 @@ class OverlayService : LifecycleService() {
             WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY,
             WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE or
                 WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or
-                WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN or
-                WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS,
+                WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN,
             PixelFormat.TRANSLUCENT,
         ).apply {
             gravity = Gravity.BOTTOM or Gravity.START
             alpha = AppSettings.DEFAULT_OPACITY
             title = "seequid water"
+            ignoreSystemInsets()
         }
         water.visibility = View.GONE
         windowManager.addView(water, waterParams)
@@ -170,6 +171,7 @@ class OverlayService : LifecycleService() {
             gravity = Gravity.BOTTOM or Gravity.END
             x = dp(16)
             title = "seequid handle"
+            ignoreSystemInsets()
         }
         windowManager.addView(handle, handleParams)
     }
@@ -178,28 +180,91 @@ class OverlayService : LifecycleService() {
         if (!::water.isInitialized) return
         val skin = if (settings.skin.isPro && !isPro) LiquidSkin.WATER else settings.skin
         val visible = !state.quiet && state.level > 0.005f
-        val screenHeight = screenHeight()
-        val waterPx = (state.level * screenHeight).toInt()
+        val area = usableArea()
+        // The water runs from the very bottom edge, under the nav bar. The system
+        // draws the nav buttons above overlays, so they stay visible and tappable.
+        val waterSpan = area.height + area.bottom
+        val waterPx = (state.level * waterSpan).toInt()
 
         water.setSkin(skin)
         water.animating = visible && screenOn
         water.visibility = if (visible) View.VISIBLE else View.GONE
 
-        val targetHeight = if (visible) waterPx + water.crestPaddingPx else 1
+        // Never taller than the space below the status bar, or the system shifts the window.
+        val targetHeight = if (visible) (waterPx + water.crestPaddingPx).coerceAtMost(waterSpan) else 1
+        val targetWidth = area.width + area.left + area.right
         val targetAlpha = safeOpacity(settings.opacity)
-        if (abs(waterParams.height - targetHeight) >= 2 || waterParams.alpha != targetAlpha) {
+        if (abs(waterParams.height - targetHeight) >= 2 || waterParams.alpha != targetAlpha ||
+            waterParams.width != targetWidth || waterParams.x != 0 || waterParams.y != 0
+        ) {
             waterParams.height = targetHeight
             waterParams.alpha = targetAlpha
+            waterParams.width = targetWidth
+            waterParams.x = 0
+            waterParams.y = 0
             windowManager.updateViewLayout(water, waterParams)
         }
 
+        // The drop rides the surface but stays clear of the nav bar, where it couldn't be tapped.
         val showHandle = visible && state.level >= settings.handleThreshold
         handle.visibility = if (showHandle) View.VISIBLE else View.GONE
-        val handleY = (waterPx + dp(20)).coerceAtMost(screenHeight - dp(160))
-        if (showHandle && handleParams.y != handleY) {
+        val handleX = area.right + dp(16)
+        val handleY = (waterPx + dp(20)).coerceIn(area.bottom + dp(12), waterSpan - dp(160))
+        if (showHandle && (handleParams.y != handleY || handleParams.x != handleX)) {
+            handleParams.x = handleX
             handleParams.y = handleY
             windowManager.updateViewLayout(handle, handleParams)
         }
+    }
+
+    /**
+     * Position windows against the raw display: the nav-bar offset is applied
+     * explicitly in [render]. Without this, some OEMs (Samsung) already lift
+     * overlays above the nav bar and the offset would be applied twice.
+     */
+    private fun WindowManager.LayoutParams.ignoreSystemInsets() {
+        // Fill the camera cutout strip too (it sits on a long edge in landscape).
+        layoutInDisplayCutoutMode = if (Build.VERSION.SDK_INT >= 30) {
+            WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_ALWAYS
+        } else {
+            WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_SHORT_EDGES
+        }
+        if (Build.VERSION.SDK_INT >= 30) {
+            fitInsetsTypes = 0
+        } else {
+            flags = flags or WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS
+        }
+    }
+
+    /** Screen area the water may cover, in px, with the insets it must leave clear. */
+    private data class Area(val width: Int, val height: Int, val left: Int, val right: Int, val bottom: Int)
+
+    /**
+     * Screen area below the status bar, plus the navigation bar insets. The water
+     * fills under the nav bar; the drop button uses the insets to stay tappable. Handles side nav bars in landscape.
+     */
+    private fun usableArea(): Area {
+        if (Build.VERSION.SDK_INT >= 30) {
+            val metrics = windowManager.currentWindowMetrics
+            val nav = metrics.windowInsets.getInsetsIgnoringVisibility(WindowInsets.Type.navigationBars())
+            val top = metrics.windowInsets.getInsetsIgnoringVisibility(
+                WindowInsets.Type.statusBars() or WindowInsets.Type.displayCutout()
+            ).top
+            val bounds = metrics.bounds
+            return Area(
+                width = bounds.width() - nav.left - nav.right,
+                height = bounds.height() - nav.bottom - top,
+                left = nav.left,
+                right = nav.right,
+                bottom = nav.bottom,
+            )
+        }
+        // API 28–29: display metrics already exclude the nav bar; offset by its height when it's at the bottom.
+        val dm = resources.displayMetrics
+        val portrait = resources.configuration.orientation == Configuration.ORIENTATION_PORTRAIT
+        val id = resources.getIdentifier("navigation_bar_height", "dimen", "android")
+        val navHeight = if (portrait && id > 0) resources.getDimensionPixelSize(id) else 0
+        return Area(dm.widthPixels, dm.heightPixels, 0, 0, navHeight)
     }
 
     /**
@@ -215,10 +280,6 @@ class OverlayService : LifecycleService() {
         }
         return min(requested, max).coerceAtLeast(0.1f)
     }
-
-    private fun screenHeight(): Int =
-        if (Build.VERSION.SDK_INT >= 30) windowManager.currentWindowMetrics.bounds.height()
-        else resources.displayMetrics.heightPixels
 
     private fun openQuickLog() {
         startActivity(
