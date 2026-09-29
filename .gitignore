@@ -1,0 +1,18 @@
+# Android / Gradle
+.gradle/
+.kotlin/
+build/
+local.properties
+*.iml
+.idea/
+captures/
+*.apk
+*.aab
+*.keystore
+*.jks
+
+# Not part of the submission
+archive/
+board.html
+RELAY-PROTOCOL.md
+hydration-overlay/

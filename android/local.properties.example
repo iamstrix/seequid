@@ -1,0 +1,4 @@
+sdk.dir=/path/to/Android/Sdk
+# RevenueCat Test Store key (starts with test_). Debug builds only:
+# the SDK deliberately crashes release builds that use a Test Store key.
+revenuecat.apiKey=test_xxxxxxxxxxxxxxxx
