@@ -11,7 +11,7 @@ import android.content.IntentFilter
 import android.content.pm.ServiceInfo
 import android.content.res.Configuration
 import android.graphics.PixelFormat
-import android.graphics.drawable.GradientDrawable
+import android.graphics.Rect
 import android.hardware.input.InputManager
 import android.os.Build
 import android.provider.Settings
@@ -19,7 +19,6 @@ import android.view.Gravity
 import android.view.View
 import android.view.WindowInsets
 import android.view.WindowManager
-import android.widget.ImageView
 import android.widget.Toast
 import androidx.core.app.NotificationCompat
 import androidx.core.app.ServiceCompat
@@ -44,16 +43,15 @@ import kotlin.math.min
  * Hosts the two overlay windows:
  *  - the water: sized to the water height, never touchable, window alpha < 0.8
  *    so taps pass through to the app underneath (Android 12+ occlusion rule);
- *  - the drop handle: a small touchable bubble shown only once the user is
+ *  - the squid handle ([SquidHandle]): a small touchable squid shown only once the user is
  *    behind, which opens the quick-log sheet.
  */
 class OverlayService : LifecycleService() {
 
     private lateinit var windowManager: WindowManager
     private lateinit var water: WaterView
-    private lateinit var handle: ImageView
+    private lateinit var squid: SquidHandle
     private lateinit var waterParams: WindowManager.LayoutParams
-    private lateinit var handleParams: WindowManager.LayoutParams
 
     private var screenOn = true
     /** Seequid itself is open and shows its own water, so the overlay hides. */
@@ -160,32 +158,8 @@ class OverlayService : LifecycleService() {
         water.visibility = View.GONE
         windowManager.addView(water, waterParams)
 
-        val size = dp(52)
-        handle = ImageView(this).apply {
-            setImageResource(R.drawable.ic_drop)
-            setPadding(dp(12), dp(12), dp(12), dp(12))
-            background = GradientDrawable().apply {
-                shape = GradientDrawable.OVAL
-                setColor(0xF2FFFFFF.toInt())
-                setStroke(dp(2), 0xFF3D9BFF.toInt())
-            }
-            elevation = dp(6).toFloat()
-            contentDescription = getString(R.string.handle_description)
-            visibility = View.GONE
-            setOnClickListener { openQuickLog() }
-        }
-        handleParams = WindowManager.LayoutParams(
-            size, size,
-            WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY,
-            WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN,
-            PixelFormat.TRANSLUCENT,
-        ).apply {
-            gravity = Gravity.BOTTOM or Gravity.END
-            x = dp(16)
-            title = "seequid handle"
-            ignoreSystemInsets()
-        }
-        windowManager.addView(handle, handleParams)
+        squid = SquidHandle(this, windowManager, onTap = ::openQuickLog, bounds = ::squidBounds)
+        squid.attach()
     }
 
     private fun render(state: HydrationState, settings: AppSettings, isPro: Boolean) {
@@ -222,16 +196,15 @@ class OverlayService : LifecycleService() {
             windowManager.updateViewLayout(water, waterParams)
         }
 
-        // The drop rides the surface but stays clear of the nav bar, where it couldn't be tapped.
-        val showHandle = visible && state.level >= settings.handleThreshold
-        handle.visibility = if (showHandle) View.VISIBLE else View.GONE
-        val handleX = area.right + dp(16)
-        val handleY = (waterPx + dp(20)).coerceIn(area.bottom + dp(12), waterSpan - dp(160))
-        if (showHandle && (handleParams.y != handleY || handleParams.x != handleX)) {
-            handleParams.x = handleX
-            handleParams.y = handleY
-            windowManager.updateViewLayout(handle, handleParams)
-        }
+        // The squid shows once the water is high enough; it positions and tucks itself.
+        squid.setThirsty(state.level >= 0.6f)
+        squid.setVisible(visible && state.level >= settings.handleThreshold)
+    }
+
+    /** Where the squid may sit: the screen inside the status and navigation bars, in raw display px. */
+    private fun squidBounds(): Rect {
+        val a = usableArea()
+        return Rect(a.left, a.top, a.left + a.width, a.top + a.height)
     }
 
     /**
@@ -254,7 +227,7 @@ class OverlayService : LifecycleService() {
     }
 
     /** Screen area the water may cover, in px, with the insets it must leave clear. */
-    private data class Area(val width: Int, val height: Int, val left: Int, val right: Int, val bottom: Int)
+    private data class Area(val width: Int, val height: Int, val left: Int, val right: Int, val bottom: Int, val top: Int)
 
     /**
      * Screen area below the status bar, plus the navigation bar insets. The water
@@ -274,6 +247,7 @@ class OverlayService : LifecycleService() {
                 left = nav.left,
                 right = nav.right,
                 bottom = nav.bottom,
+                top = top,
             )
         }
         // API 28–29: display metrics already exclude the nav bar; offset by its height when it's at the bottom.
@@ -281,7 +255,9 @@ class OverlayService : LifecycleService() {
         val portrait = resources.configuration.orientation == Configuration.ORIENTATION_PORTRAIT
         val id = resources.getIdentifier("navigation_bar_height", "dimen", "android")
         val navHeight = if (portrait && id > 0) resources.getDimensionPixelSize(id) else 0
-        return Area(dm.widthPixels, dm.heightPixels, 0, 0, navHeight)
+        val statusId = resources.getIdentifier("status_bar_height", "dimen", "android")
+        val status = if (statusId > 0) resources.getDimensionPixelSize(statusId) else 0
+        return Area(dm.widthPixels, dm.heightPixels - status, 0, 0, navHeight, status)
     }
 
     /**
@@ -306,6 +282,7 @@ class OverlayService : LifecycleService() {
 
     override fun onConfigurationChanged(newConfig: Configuration) {
         super.onConfigurationChanged(newConfig)
+        if (::squid.isInitialized) squid.relayout()
         last?.let { (state, settings, pro) -> render(state, settings, pro) }
     }
 
@@ -313,7 +290,7 @@ class OverlayService : LifecycleService() {
         if (::water.isInitialized) {
             runCatching { unregisterReceiver(screenReceiver) }
             windowManager.removeView(water)
-            windowManager.removeView(handle)
+            squid.detach()
         }
         super.onDestroy()
     }

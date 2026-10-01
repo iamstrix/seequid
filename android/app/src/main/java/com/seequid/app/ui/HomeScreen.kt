@@ -58,6 +58,7 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -85,8 +86,11 @@ fun HomeScreen(
     onUpgrade: () -> Unit,
 ) {
     Scaffold(
+        modifier = Modifier.background(deepSeaBackground()),
+        containerColor = Color.Transparent,
         topBar = {
             TopAppBar(
+                colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Transparent),
                 title = {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         // The mipmap is the 108dp adaptive canvas; zoom to its 72dp visible area.

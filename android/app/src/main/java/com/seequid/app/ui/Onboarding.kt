@@ -186,7 +186,7 @@ private fun Page(
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center,
     ) {
-        illustration()
+        AmbientGlow { illustration() }
         Spacer(Modifier.height(32.dp))
         Text(title, style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center)
         Spacer(Modifier.height(12.dp))

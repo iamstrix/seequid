@@ -22,7 +22,9 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -56,6 +58,15 @@ class QuickLogActivity : ComponentActivity() {
                     ) {
                         Column(Modifier.padding(20.dp)) {
                             Text("How much did you drink?", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+                            // Today's progress, right where the decision is made.
+                            val state by container.hydration.state.collectAsStateWithLifecycle(initialValue = null)
+                            state?.let {
+                                Text(
+                                    "${amount(it.loggedMl)} of ${amount(it.goalMl)} today",
+                                    color = MaterialTheme.colorScheme.secondary,
+                                    fontWeight = FontWeight.Bold,
+                                )
+                            }
                             Text("Log it and the water on your screen will go down.", color = MaterialTheme.colorScheme.onSurfaceVariant)
                             Spacer(Modifier.height(16.dp))
                             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {

@@ -10,6 +10,9 @@ import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.systemBarsPadding
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.background
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -27,8 +30,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.compose.LifecycleResumeEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.revenuecat.purchases.ui.revenuecatui.PaywallDialog
-import com.revenuecat.purchases.ui.revenuecatui.PaywallDialogOptions
+import com.revenuecat.purchases.ui.revenuecatui.Paywall
+import com.revenuecat.purchases.ui.revenuecatui.PaywallOptions
 import com.revenuecat.purchases.ui.revenuecatui.PaywallListener
 import com.revenuecat.purchases.CustomerInfo
 import com.revenuecat.purchases.models.StoreTransaction
@@ -163,24 +166,35 @@ private fun SeequidRoot() {
         }
     }
 
-    if (showPaywall) {
+    // Pro users never see the paywall, even from the first-run trigger.
+    if (showPaywall && !isPro) {
         val dismiss = {
             showPaywall = false
             scope.launch { c.settings.setPaywallSeen() }
             Unit
         }
         if (c.billing.isConfigured) {
-            PaywallDialog(
-                PaywallDialogOptions.Builder()
-                    .setRequiredEntitlementIdentifier(BillingRepository.ENTITLEMENT_PRO)
-                    .setDismissRequest(dismiss)
-                    .setListener(object : PaywallListener {
-                        override fun onPurchaseCompleted(customerInfo: CustomerInfo, storeTransaction: StoreTransaction) {
-                            celebrate = proPlanFor(storeTransaction.productIds)
-                        }
-                    })
-                    .build()
-            )
+            // Full screen rather than PaywallDialog, which on some phones only wraps its content
+            // and leaves the app showing underneath.
+            BackHandler(onBack = dismiss)
+            Box(
+                Modifier
+                    .fillMaxSize()
+                    .background(MaterialTheme.colorScheme.background)
+                    .systemBarsPadding()
+            ) {
+                Paywall(
+                    PaywallOptions.Builder(dismissRequest = dismiss)
+                        .setShouldDisplayDismissButton(true)
+                        .setListener(object : PaywallListener {
+                            override fun onPurchaseCompleted(customerInfo: CustomerInfo, storeTransaction: StoreTransaction) {
+                                celebrate = proPlanFor(storeTransaction.productIds)
+                                dismiss()
+                            }
+                        })
+                        .build()
+                )
+            }
         } else {
             AlertDialog(
                 onDismissRequest = dismiss,

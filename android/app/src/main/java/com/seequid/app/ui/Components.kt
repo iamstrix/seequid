@@ -41,6 +41,10 @@ import androidx.compose.ui.graphics.BlendMode
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.CompositingStrategy
 import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.compositeOver
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.size
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.clipPath
@@ -194,6 +198,33 @@ fun Glass(
 /** 1750 -> "1.75 L", 1600 -> "1.6 L", 250 -> "0.25 L". */
 fun liters(ml: Int): String =
     String.format(Locale.US, "%.2f", ml / 1000f).trimEnd('0').trimEnd('.') + " L"
+
+/**
+ * The home screen's background: a faint deep-sea glow from the top that settles into the base colour,
+ * so the screen has depth instead of a flat void.
+ */
+@Composable
+fun deepSeaBackground(): Brush {
+    val base = MaterialTheme.colorScheme.background
+    return Brush.verticalGradient(
+        0f to Aqua.copy(alpha = 0.14f).compositeOver(base),
+        0.55f to Aqua.copy(alpha = 0.04f).compositeOver(base),
+        1f to base,
+    )
+}
+
+/** A soft blue halo that frames an illustration. */
+@Composable
+fun AmbientGlow(modifier: Modifier = Modifier, content: @Composable () -> Unit) {
+    Box(modifier, contentAlignment = Alignment.Center) {
+        Box(
+            Modifier
+                .size(340.dp)
+                .background(Brush.radialGradient(listOf(Aqua.copy(alpha = 0.22f), Color.Transparent)))
+        )
+        content()
+    }
+}
 
 /** One rule for amounts everywhere: under 1 L in ml ("200 ml"), from 1 L in liters ("1.25 L"). */
 fun amount(ml: Int): String = if (ml < 1000) "$ml ml" else liters(ml)
