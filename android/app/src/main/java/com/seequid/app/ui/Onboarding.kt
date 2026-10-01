@@ -39,7 +39,6 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Slider
-import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -62,9 +61,6 @@ import com.seequid.app.data.AppSettings
 import com.seequid.app.domain.HydrationCalculator
 import com.seequid.app.overlay.LiquidSkin
 import kotlinx.coroutines.launch
-import java.time.LocalTime
-import java.time.format.DateTimeFormatter
-import java.util.Locale
 import kotlin.math.roundToInt
 
 /**
@@ -95,29 +91,29 @@ fun OnboardingScreen(
             when (current) {
                 0 -> Page(
                     title = "Your screen is thirsty",
-                    body = "Seequid slowly fills your phone with water as the day goes on. " +
-                        "Fall behind and the tide rises over everything you do. Drink, and it drains away.",
+                    body = "Seequid slowly covers your screen with water during the day. " +
+                        "If you don't drink enough, the water rises higher. " +
+                        "When you drink and log it, the water goes down.",
                     demoFill = 0.45f,
                     primary = "Show me how" to { step = 1 },
                 )
                 1 -> Page(
-                    title = "No nagging. Just a tide.",
-                    body = "No notifications to swipe away. The water is always there, " +
-                        "see-through and tap-through, so you can keep using your phone. " +
-                        "When it gets high, tap the drop to log a drink.",
+                    title = "No annoying reminders",
+                    body = "Seequid doesn't send reminder notifications. Instead, the water stays on your screen. " +
+                        "You can see through it and tap through it, so you can use your phone normally. " +
+                        "When the water gets high, tap the drop button to log a drink.",
                     demoFill = 0.7f,
                     primary = "Set my goal" to { step = 2 },
                 )
-                2 -> GoalPage(settings) { goal, wake, sleep ->
+                2 -> GoalPage(settings) { goal ->
                     scope.launch {
                         context.container.settings.setGoal(goal)
-                        context.container.settings.setWakeHours(wake, sleep)
                         step = 3
                     }
                 }
                 else -> PermissionPage(
                     granted = canDrawOverlays,
-                    finishLabel = if (replay) "Done" else "Start the tide",
+                    finishLabel = if (replay) "Done" else "Start Seequid",
                     onGrant = {
                         context.startActivity(
                             Intent(
@@ -190,23 +186,9 @@ private fun PhoneMock(fill: Float) {
 }
 
 @Composable
-private fun GoalPage(settings: AppSettings, onNext: (goal: Int, wake: Int, sleep: Int) -> Unit) {
+private fun GoalPage(settings: AppSettings, onNext: (goal: Int) -> Unit) {
     var goal by remember { mutableFloatStateOf(settings.hydration.dailyGoalMl.toFloat()) }
-    var wake by remember { mutableFloatStateOf(settings.hydration.wakeMinute / 60f) }
-    var sleep by remember { mutableFloatStateOf(settings.hydration.sleepMinute / 60f) }
     val goalMl = (goal / 50).roundToInt() * 50
-    // Blue sets an amount of water; the time sliders are plain controls. Coral stays on the one action.
-    val waterSlider = SliderDefaults.colors(
-        thumbColor = Aqua, activeTrackColor = Aqua,
-        inactiveTrackColor = MaterialTheme.colorScheme.surfaceVariant,
-    )
-    val neutralSlider = SliderDefaults.colors(
-        thumbColor = MaterialTheme.colorScheme.onSurface,
-        activeTrackColor = MaterialTheme.colorScheme.onSurfaceVariant,
-        inactiveTrackColor = MaterialTheme.colorScheme.surfaceVariant,
-        activeTickColor = MaterialTheme.colorScheme.surfaceVariant,
-        inactiveTickColor = MaterialTheme.colorScheme.onSurfaceVariant,
-    )
     Column(Modifier.fillMaxSize(), verticalArrangement = Arrangement.Center) {
         Spacer(Modifier.height(36.dp))
         Glass(
@@ -214,34 +196,34 @@ private fun GoalPage(settings: AppSettings, onNext: (goal: Int, wake: Int, sleep
             Modifier.size(width = 96.dp, height = 128.dp).align(Alignment.CenterHorizontally),
         )
         Spacer(Modifier.height(24.dp))
-        Text("Your daily pace", style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
+        Text("Your daily goal", style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
         Spacer(Modifier.height(8.dp))
-        Text("The water rises when you fall behind this pace, and stays away while you sleep.",
+        Text("Choose how much water you want to drink each day. If you drink less than you should " +
+            "by that time of day, the water on your screen rises.",
             color = MaterialTheme.colorScheme.onSurfaceVariant)
         Spacer(Modifier.height(24.dp))
         Text("Daily goal: ${liters(goalMl)}", style = MaterialTheme.typography.titleMedium)
-        Slider(goal, { goal = it }, colors = waterSlider,
+        Slider(goal, { goal = it }, colors = waterSliderColors(),
             valueRange = HydrationCalculator.MIN_GOAL_ML.toFloat()..HydrationCalculator.MAX_GOAL_ML.toFloat())
-        Text("Capped at 4 L — more isn't healthier. Not medical advice; ask a doctor if you have a condition.",
+        Text("The maximum is 4 L, because drinking too much water can be harmful. This is not medical advice. " +
+            "If you have a health condition, ask your doctor.",
             style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-        Spacer(Modifier.height(20.dp))
-        Text("Awake from ${clock(wake.roundToInt())} to ${clock(sleep.roundToInt())}",
-            style = MaterialTheme.typography.titleMedium)
-        Text("Wake", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-        Slider(wake, { wake = it.coerceAtMost(sleep - 4) }, valueRange = 4f..12f, steps = 7, colors = neutralSlider)
-        Text("Sleep", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-        Slider(sleep, { sleep = it.coerceAtLeast(wake + 4) }, valueRange = 18f..24f, steps = 5, colors = neutralSlider)
+        Spacer(Modifier.height(16.dp))
+        Text(
+            if (settings.hydration.scheduleEnabled)
+                "The water is turned off while you sleep (${clock(settings.hydration.sleepMinute / 60)} to " +
+                    "${clock(settings.hydration.wakeMinute / 60)}). You can change these hours later in Settings."
+            else "Your sleep schedule is turned off, so the water can appear at any time of day. " +
+                "You can change this in Settings.",
+            style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
         Spacer(Modifier.height(24.dp))
         Button(
-            onClick = { onNext(goalMl, wake.roundToInt() * 60, sleep.roundToInt() * 60) },
+            onClick = { onNext(goalMl) },
             modifier = Modifier.fillMaxWidth(),
         ) { Text("Continue") }
     }
 }
-
-/** 7 -> "7:00 AM", 23 -> "11:00 PM", 24 -> "12:00 AM". */
-private fun clock(hour: Int): String =
-    LocalTime.of(hour % 24, 0).format(DateTimeFormatter.ofPattern("h:mm a", Locale.US))
 
 @Composable
 private fun PermissionPage(granted: Boolean, finishLabel: String, onGrant: () -> Unit, onStart: () -> Unit) {
@@ -255,10 +237,10 @@ private fun PermissionPage(granted: Boolean, finishLabel: String, onGrant: () ->
             Modifier.size(96.dp).clip(RoundedCornerShape(28.dp)).graphicsLayer(scaleX = 1.5f, scaleY = 1.5f),
         )
         Spacer(Modifier.height(24.dp))
-        Text("Let the water in", style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
+        Text("Allow Seequid to show water", style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
         Spacer(Modifier.height(8.dp))
         Text(
-            "Seequid needs “Display over other apps” to draw the water above your screen.",
+            "To show water on top of your other apps, Seequid needs a permission called “Display over other apps”.",
             style = MaterialTheme.typography.bodyLarge,
             textAlign = TextAlign.Center,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -266,16 +248,16 @@ private fun PermissionPage(granted: Boolean, finishLabel: String, onGrant: () ->
         Spacer(Modifier.height(20.dp))
         Card(Modifier.fillMaxWidth()) {
             Column(Modifier.padding(vertical = 8.dp)) {
-                Reassurance(Icons.Default.VisibilityOff, "It never reads what's on your screen")
-                Reassurance(Icons.Default.TouchApp, "Your taps go straight through the water")
-                Reassurance(Icons.Default.PauseCircle, "Pause it any time from the notification")
+                Reassurance(Icons.Default.VisibilityOff, "Seequid never reads or records your screen")
+                Reassurance(Icons.Default.TouchApp, "Your taps still work. They pass through the water.")
+                Reassurance(Icons.Default.PauseCircle, "You can pause the water anytime from the notification")
             }
         }
         Spacer(Modifier.height(28.dp))
         if (!granted) {
-            Button(onClick = onGrant, modifier = Modifier.fillMaxWidth()) { Text("Open settings") }
+            Button(onClick = onGrant, modifier = Modifier.fillMaxWidth()) { Text("Open phone settings") }
             Spacer(Modifier.height(8.dp))
-            Text("Find Seequid in the list and switch it on, then come back.",
+            Text("In the list, find Seequid and turn it on. Then come back to this app.",
                 style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             Spacer(Modifier.height(8.dp))
             TextButton(onClick = onStart, modifier = Modifier.fillMaxWidth()) { Text("Skip for now") }

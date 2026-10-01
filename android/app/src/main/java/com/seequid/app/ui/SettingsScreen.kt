@@ -38,6 +38,8 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Slider
+import androidx.compose.material3.Switch
+import androidx.compose.material3.SliderColors
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
@@ -58,6 +60,8 @@ fun SettingsScreen(
     settings: AppSettings,
     isPro: Boolean,
     onGoal: (Int) -> Unit,
+    onWakeHours: (wakeMinute: Int, sleepMinute: Int) -> Unit,
+    onScheduleEnabled: (Boolean) -> Unit,
     onOpacity: (Float) -> Unit,
     onThreshold: (Float) -> Unit,
     onManageSubscription: () -> Unit,
@@ -81,33 +85,56 @@ fun SettingsScreen(
             var goal by remember(settings.hydration.dailyGoalMl) { mutableFloatStateOf(settings.hydration.dailyGoalMl.toFloat()) }
             var opacity by remember(settings.opacity) { mutableFloatStateOf(settings.opacity) }
             var threshold by remember(settings.handleThreshold) { mutableFloatStateOf(settings.handleThreshold) }
+            var wake by remember(settings.hydration.wakeMinute) { mutableFloatStateOf(settings.hydration.wakeMinute / 60f) }
+            var sleep by remember(settings.hydration.sleepMinute) { mutableFloatStateOf(settings.hydration.sleepMinute / 60f) }
+            val saveHours = { onWakeHours(wake.roundToInt() * 60, sleep.roundToInt() * 60) }
 
             ProCard(isPro, onUpgrade = onUpgrade, onManage = onManageSubscription, onRestore = onRestore)
 
-            SectionTitle("Pace")
+            SectionTitle("Daily goal")
             SettingsCard {
                 SliderRow("Daily goal: ${liters((goal / 50).roundToInt() * 50)}", goal,
                     HydrationCalculator.MIN_GOAL_ML.toFloat()..HydrationCalculator.MAX_GOAL_ML.toFloat(),
-                    { goal = it }, { onGoal((goal / 50).roundToInt() * 50) })
-                Hint("Waking hours: ${settings.hydration.wakeMinute / 60}:00–${settings.hydration.sleepMinute / 60}:00 " +
-                    "(no water outside them)")
+                    { goal = it }, { onGoal((goal / 50).roundToInt() * 50) }, waterSliderColors())
+                Spacer(Modifier.height(12.dp))
+                ListItem(
+                    headlineContent = { Text("Sleep schedule") },
+                    supportingContent = {
+                        Text(
+                            if (settings.hydration.scheduleEnabled)
+                                "You're awake from ${clock(wake.roundToInt())} to ${clock(sleep.roundToInt())}. " +
+                                    "The water stays off outside these hours."
+                            else "Off. The water can appear at any time of day."
+                        )
+                    },
+                    trailingContent = { Switch(settings.hydration.scheduleEnabled, onScheduleEnabled) },
+                    colors = ListItemDefaults.colors(containerColor = Color.Transparent),
+                )
+                if (settings.hydration.scheduleEnabled) {
+                    SliderRow("Wake-up time", wake, 4f..12f, { wake = it.coerceAtMost(sleep - 4) }, saveHours,
+                        neutralSliderColors(), steps = 7)
+                    // Up to 4 AM the next day, for night owls.
+                    SliderRow("Bedtime", sleep, 18f..HydrationCalculator.LATEST_SLEEP_MINUTE / 60f,
+                        { sleep = it.coerceAtLeast(wake + 4) }, saveHours, neutralSliderColors(), steps = 9)
+                }
             }
 
-            SectionTitle("Water")
+            SectionTitle("Water on your screen")
             SettingsCard {
-                SliderRow("Opacity: ${(opacity * 100).roundToInt()}%", opacity,
-                    AppSettings.MIN_OPACITY..AppSettings.MAX_OPACITY, { opacity = it }, { onOpacity(opacity) })
-                Hint("Kept below 80% on purpose — above that, Android stops your taps from reaching the app underneath.")
+                SliderRow("How visible the water is: ${(opacity * 100).roundToInt()}%", opacity,
+                    AppSettings.MIN_OPACITY..AppSettings.MAX_OPACITY, { opacity = it }, { onOpacity(opacity) }, waterSliderColors())
+                Hint("The maximum is 75%. If the water were more solid than that, Android would stop your taps " +
+                    "from reaching the apps underneath.")
                 Spacer(Modifier.height(12.dp))
-                SliderRow("Show the drop at ${(threshold * 100).roundToInt()}% water", threshold,
-                    0.1f..0.9f, { threshold = it }, { onThreshold(threshold) })
+                SliderRow("Show the drink button when the water reaches ${(threshold * 100).roundToInt()}%", threshold,
+                    0.1f..0.9f, { threshold = it }, { onThreshold(threshold) }, neutralSliderColors())
             }
 
             SectionTitle("Help")
             Card(Modifier.fillMaxWidth()) {
                 ListItem(
                     headlineContent = { Text("How Seequid works") },
-                    supportingContent = { Text("Replay the intro — your settings stay as they are") },
+                    supportingContent = { Text("Watch the introduction again. Your settings won't change.") },
                     leadingContent = { Icon(Icons.Default.School, contentDescription = null) },
                     colors = ListItemDefaults.colors(containerColor = Color.Transparent),
                     modifier = Modifier.clickable(onClick = onReplayIntro),
@@ -115,9 +142,9 @@ fun SettingsScreen(
             }
 
             Text(
-                "Seequid is a habit tool, not medical advice. Daily goals are capped at 4 L because drinking " +
-                    "far beyond your needs can be harmful. If you have a heart or kidney condition, " +
-                    "ask your doctor how much to drink.\n\nVersion ${BuildConfig.VERSION_NAME}",
+                "Seequid helps you build a habit. It is not medical advice. The daily goal can't go above 4 L, " +
+                    "because drinking much more water than you need can be harmful. If you have a heart or " +
+                    "kidney condition, ask your doctor how much water you should drink.\n\nVersion ${BuildConfig.VERSION_NAME}",
                 Modifier.padding(horizontal = 20.dp, vertical = 16.dp),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -142,7 +169,8 @@ private fun ProCard(isPro: Boolean, onUpgrade: () -> Unit, onManage: () -> Unit,
             Column(Modifier.weight(1f)) {
                 Text("Seequid Pro", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
                 Text(
-                    if (isPro) "Active ✓ — thanks for supporting a student dev" else "All liquids and your drinking history",
+                    if (isPro) "Active ✓. Thank you for supporting a student developer!"
+                    else "Unlock all drink colors and see your water history",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
@@ -192,10 +220,12 @@ private fun SliderRow(
     range: ClosedFloatingPointRange<Float>,
     onChange: (Float) -> Unit,
     onDone: () -> Unit,
+    colors: SliderColors,
+    steps: Int = 0,
 ) {
     Column(Modifier.padding(horizontal = 16.dp)) {
         Text(label, style = MaterialTheme.typography.bodyLarge)
-        Slider(value, onChange, valueRange = range, onValueChangeFinished = onDone)
+        Slider(value, onChange, valueRange = range, onValueChangeFinished = onDone, colors = colors, steps = steps)
     }
 }
 

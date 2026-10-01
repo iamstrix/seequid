@@ -50,6 +50,28 @@ class HydrationCalculatorTest {
     }
 
     @Test
+    fun scheduleOffPacesAcrossTheWholeDay() {
+        val allDay = settings.copy(scheduleEnabled = false)
+        val s = HydrationCalculator.state(allDay, 0, 3 * 60.0, loggedMl = 0)
+        assertTrue("no quiet hours", !s.quiet)
+        assertEquals(300, s.expectedMl) // 3 of 24 hours of 2400 ml
+    }
+
+    @Test
+    fun bedtimeAfterMidnightKeepsTheDayGoing() {
+        val nightOwl = settings.copy(wakeMinute = 10 * 60, sleepMinute = 26 * 60) // 10 AM to 2 AM
+        assertEquals(2 * 60, HydrationCalculator.dayBoundaryMinute(nightOwl))
+        // 1 AM is the last waking hour of the previous day: nearly the whole goal is due, not zero.
+        val oneAm = HydrationCalculator.state(nightOwl, 0, 1 * 60.0, loggedMl = 2200)
+        assertTrue(!oneAm.quiet)
+        assertEquals(2250, oneAm.expectedMl)
+        // 3 AM is asleep.
+        assertTrue(HydrationCalculator.state(nightOwl, 0, 3 * 60.0, loggedMl = 0).quiet)
+        // Normal bedtimes keep a midnight boundary.
+        assertEquals(0, HydrationCalculator.dayBoundaryMinute(settings))
+    }
+
+    @Test
     fun goalIsCappedForSafety() {
         assertEquals(HydrationCalculator.MAX_GOAL_ML, HydrationCalculator.clampGoal(9000))
         assertEquals(HydrationCalculator.MIN_GOAL_ML, HydrationCalculator.clampGoal(100))

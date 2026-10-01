@@ -38,10 +38,14 @@ class HydrationRepository(
             val h = settings.hydration
             val zone = ZoneId.systemDefault()
             val local = Instant.ofEpochMilli(now).atZone(zone)
-            val since = if (h.demoMode) h.demoStartedAt
-            else local.toLocalDate().atStartOfDay(zone).toInstant().toEpochMilli()
-            val logged = drinks.filter { it.timestamp >= since }.sumOf { it.amountMl }
             val minuteOfDay = local.hour * 60 + local.minute + local.second / 60.0
+            val since = if (h.demoMode) h.demoStartedAt else {
+                // The hydration day starts at the boundary (midnight, or a past-midnight bedtime).
+                val boundary = HydrationCalculator.dayBoundaryMinute(h)
+                val date = if (minuteOfDay < boundary) local.toLocalDate().minusDays(1) else local.toLocalDate()
+                date.atStartOfDay(zone).plusMinutes(boundary.toLong()).toInstant().toEpochMilli()
+            }
+            val logged = drinks.filter { it.timestamp >= since }.sumOf { it.amountMl }
             HydrationCalculator.state(h, now, minuteOfDay, logged)
         }.distinctUntilChanged()
 

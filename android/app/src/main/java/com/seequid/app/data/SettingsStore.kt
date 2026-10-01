@@ -42,6 +42,7 @@ class SettingsStore(private val context: Context) {
         val goal = intPreferencesKey("goal_ml")
         val wake = intPreferencesKey("wake_minute")
         val sleep = intPreferencesKey("sleep_minute")
+        val schedule = booleanPreferencesKey("schedule_enabled")
         val demo = booleanPreferencesKey("demo_mode")
         val demoStart = longPreferencesKey("demo_started_at")
         val opacity = floatPreferencesKey("opacity")
@@ -59,6 +60,7 @@ class SettingsStore(private val context: Context) {
         return AppSettings(
             hydration = HydrationSettings(
                 dailyGoalMl = this[Keys.goal] ?: d.hydration.dailyGoalMl,
+                scheduleEnabled = this[Keys.schedule] ?: d.hydration.scheduleEnabled,
                 wakeMinute = this[Keys.wake] ?: d.hydration.wakeMinute,
                 sleepMinute = this[Keys.sleep] ?: d.hydration.sleepMinute,
                 demoMode = this[Keys.demo] ?: false,
@@ -77,8 +79,10 @@ class SettingsStore(private val context: Context) {
 
     suspend fun setWakeHours(wakeMinute: Int, sleepMinute: Int) = edit {
         it[Keys.wake] = wakeMinute
-        it[Keys.sleep] = sleepMinute.coerceAtLeast(wakeMinute + 60)
+        it[Keys.sleep] = sleepMinute.coerceIn(wakeMinute + 60, HydrationCalculator.LATEST_SLEEP_MINUTE)
     }
+
+    suspend fun setScheduleEnabled(enabled: Boolean) = edit { it[Keys.schedule] = enabled }
 
     /** Turning demo on restarts its ten-minute clock so the water starts from empty. */
     suspend fun setDemoMode(enabled: Boolean) = edit {

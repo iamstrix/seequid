@@ -123,16 +123,18 @@ private fun SeequidRoot() {
                 settings = s,
                 isPro = isPro,
                 onGoal = { ml -> scope.launch { c.settings.setGoal(ml) } },
+                onWakeHours = { wake, sleep -> scope.launch { c.settings.setWakeHours(wake, sleep) } },
+                onScheduleEnabled = { on -> scope.launch { c.settings.setScheduleEnabled(on) } },
                 onOpacity = { v -> scope.launch { c.settings.setOpacity(v) } },
                 onThreshold = { v -> scope.launch { c.settings.setHandleThreshold(v) } },
                 onManageSubscription = {
-                    if (c.billing.isConfigured) screen = Screen.CustomerCenter else toast("Purchases aren't configured")
+                    if (c.billing.isConfigured) screen = Screen.CustomerCenter else toast("Purchases are not set up in this build")
                 },
                 onRestore = {
                     scope.launch {
                         c.billing.restore()
-                            .onSuccess { found -> toast(if (found) "Pro restored" else "No purchases found") }
-                            .onFailure { toast("Restore failed: ${it.message}") }
+                            .onSuccess { found -> toast(if (found) "Your Pro purchase was restored" else "We couldn't find any purchases to restore") }
+                            .onFailure { toast("Couldn't restore purchases. Please try again. (${it.message})") }
                     }
                 },
                 onUpgrade = { showPaywall = true },

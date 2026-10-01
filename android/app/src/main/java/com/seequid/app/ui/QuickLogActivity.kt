@@ -55,8 +55,8 @@ class QuickLogActivity : ComponentActivity() {
                             .clickable(remember { MutableInteractionSource() }, indication = null) { },
                     ) {
                         Column(Modifier.padding(20.dp)) {
-                            Text("Log a drink", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
-                            Text("Watch the tide go out.", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            Text("How much did you drink?", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+                            Text("Log it and the water on your screen will go down.", color = MaterialTheme.colorScheme.onSurfaceVariant)
                             Spacer(Modifier.height(16.dp))
                             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                                 listOf(150, 250, 330, 500).forEach { ml ->

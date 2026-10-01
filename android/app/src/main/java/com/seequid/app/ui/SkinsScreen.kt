@@ -74,8 +74,8 @@ fun SkinsScreen(
                     ) {
                         Row(Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
                             Column(Modifier.weight(1f)) {
-                                Text("Unlock 4 more liquids", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-                                Text("Matcha, cold brew, boba and night lagoon — on your overlay too",
+                                Text("Unlock 4 more drinks", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                                Text("Change the water on your screen to matcha, cold brew, boba tea or night lagoon.",
                                     style = MaterialTheme.typography.bodySmall,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant)
                             }

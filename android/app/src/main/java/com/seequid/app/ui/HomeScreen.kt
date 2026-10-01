@@ -1,6 +1,20 @@
 package com.seequid.app.ui
 
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.Image
+import androidx.compose.material3.LinearProgressIndicator
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.foundation.background
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.foundation.layout.requiredWidth
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.platform.LocalConfiguration
+import kotlinx.coroutines.delay
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.width
@@ -50,6 +64,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.blur
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.seequid.app.data.AppSettings
 import com.seequid.app.data.DayTotal
@@ -111,17 +126,73 @@ fun HomeScreen(
             val goal = state?.goalMl ?: settings.hydration.dailyGoalMl
             val skin = if (settings.skin.isPro && !isPro) com.seequid.app.overlay.LiquidSkin.WATER else settings.skin
 
-            // Headroom for the squid, which pokes out of the glass as it fills.
-            Spacer(Modifier.height(44.dp))
-            Glass(logged.toFloat() / goal, skin, Modifier.size(width = 180.dp, height = 240.dp))
-            Spacer(Modifier.height(16.dp))
+            val mood = squidMood(state, logged, goal)
+            var tip by remember { mutableStateOf<String?>(null) }
+            LaunchedEffect(tip) {
+                if (tip != null) {
+                    delay(3500)
+                    tip = null
+                }
+            }
+            // The home water means the same as the overlay: it rises when you're behind and drains as you drink.
+            // On track it's a calm, shallow pool (never empty, so the squid still has somewhere to float).
+            val tide = if (state == null || state.quiet) 0f else state.level
+            val screenWidth = LocalConfiguration.current.screenWidthDp.dp
+            Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.TopCenter) {
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Glass(
+                        0.3f + 0.7f * tide, skin,
+                        // Break out of the screen padding so the water runs edge to edge.
+                        Modifier.requiredWidth(screenWidth).height(260.dp),
+                        mood = mood,
+                        drinkTrigger = logged,
+                        framed = false,
+                        onSquidTap = { tip = squidTip(mood, state) },
+                    )
+                    // A soft glow under the water so it fades into the stats instead of ending on a hard edge.
+                    Box(
+                        Modifier
+                            .requiredWidth(screenWidth)
+                            .height(48.dp)
+                            .background(Brush.verticalGradient(listOf(Color(skin.front).copy(alpha = 0.45f), Color.Transparent)))
+                    )
+                }
+                // Keep the bubble off the squid's face: below it when the water is high, above it when low.
+                val bubbleAt = if (tide > 0.5f) Alignment.BottomCenter else Alignment.TopCenter
+                androidx.compose.animation.AnimatedVisibility(
+                    tip != null, Modifier.align(bubbleAt).padding(bottom = 16.dp), enter = fadeIn(), exit = fadeOut(),
+                ) {
+                    Surface(
+                        shape = RoundedCornerShape(16.dp),
+                        color = MaterialTheme.colorScheme.surfaceContainerHighest,
+                        shadowElevation = 4.dp,
+                        modifier = Modifier.padding(horizontal = 24.dp),
+                    ) {
+                        Text(
+                            tip.orEmpty(),
+                            Modifier.padding(horizontal = 14.dp, vertical = 10.dp),
+                            textAlign = TextAlign.Center,
+                        )
+                    }
+                }
+            }
             Text(
                 liters(logged),
                 style = MaterialTheme.typography.displayMedium,
                 fontWeight = FontWeight.Bold,
             )
+            // Progress towards the goal is green, never water: blue only ever means "you need to drink".
+            LinearProgressIndicator(
+                progress = { (logged.toFloat() / goal).coerceIn(0f, 1f) },
+                modifier = Modifier.padding(vertical = 8.dp).width(220.dp).height(8.dp),
+                color = MaterialTheme.colorScheme.secondary,
+                trackColor = MaterialTheme.colorScheme.surfaceVariant,
+                strokeCap = StrokeCap.Round,
+                gapSize = 0.dp,
+                drawStopIndicator = {},
+            )
             Text(
-                "of ${liters(goal)} · ${logged * 100 / goal.coerceAtLeast(1)}%",
+                "${logged * 100 / goal.coerceAtLeast(1)}% of your ${liters(goal)} goal",
                 style = MaterialTheme.typography.titleMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
@@ -129,7 +200,7 @@ fun HomeScreen(
             if (logged >= goal) {
                 Surface(shape = CircleShape, color = MaterialTheme.colorScheme.secondary) {
                     Text(
-                        "Goal hit 🎉",
+                        "Goal reached 🎉",
                         Modifier.padding(horizontal = 14.dp, vertical = 6.dp),
                         color = MaterialTheme.colorScheme.background,
                         fontWeight = FontWeight.Bold,
@@ -137,7 +208,12 @@ fun HomeScreen(
                 }
                 Spacer(Modifier.height(8.dp))
             }
-            Text(tideLine(state), color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text(
+                tideLine(state),
+                Modifier.padding(horizontal = 12.dp),
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                textAlign = TextAlign.Center,
+            )
 
             Spacer(Modifier.height(20.dp))
             Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -153,8 +229,8 @@ fun HomeScreen(
                 ListItem(
                     headlineContent = { Text("Water overlay") },
                     supportingContent = {
-                        Text(if (canDrawOverlays) "Rises over every app when you fall behind"
-                        else "Needs “Display over other apps” permission")
+                        Text(if (canDrawOverlays) "Shows water on top of your other apps when you need to drink"
+                        else "Turn on the “Display over other apps” permission to use this")
                     },
                     trailingContent = { Switch(settings.overlayEnabled, onOverlayToggle) },
                     colors = ListItemDefaults.colors(containerColor = Color.Transparent),
@@ -167,7 +243,7 @@ fun HomeScreen(
                     Column(Modifier.weight(1f)) {
                         Text("Demo mode", style = MaterialTheme.typography.labelLarge)
                         Text(
-                            "A whole day's pace in 10 minutes",
+                            "Speeds up a full day into 10 minutes, for testing",
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
@@ -190,7 +266,7 @@ fun HomeScreen(
                         Box(Modifier.clickable(onClick = onUpgrade), contentAlignment = Alignment.Center) {
                             WeekBars(week.map { it.copy(totalMl = (goal * 0.4 + it.date.dayOfMonth * 97 % goal * 0.6).toInt()) },
                                 goal, Modifier.blur(10.dp))
-                            Text("Unlock your history with Pro", fontWeight = FontWeight.Bold)
+                            Text("See your last 7 days with Pro", fontWeight = FontWeight.Bold)
                         }
                     }
                 }
@@ -200,12 +276,29 @@ fun HomeScreen(
     }
 }
 
+/** What the squid says when tapped: plain advice that matches its mood. */
+private fun squidTip(mood: SquidMood, state: HydrationState?): String {
+    val behind = state?.let { ((it.expectedMl - it.loggedMl).coerceAtLeast(0) + 25) / 50 * 50 } ?: 0
+    val toGoal = state?.let { ((it.goalMl - it.loggedMl).coerceAtLeast(0) + 25) / 50 * 50 } ?: 0
+    val almostThere = state != null && state.loggedMl >= state.goalMl * ALMOST_THERE
+    return when (mood) {
+        SquidMood.HAPPY ->
+            if (almostThere) "Almost there! Drink about ${liters(toGoal)} more to reach your goal."
+            else "You're doing great! Keep drinking a little at a time."
+        SquidMood.WORRIED -> "The water is starting to rise. Drink about ${liters(behind)} to bring it down."
+        SquidMood.THIRSTY -> "The water is rising fast! Drink about ${liters(behind)} to clear your screen."
+        SquidMood.SLEEPING -> "Shh... it's sleep time. See you in the morning!"
+        SquidMood.CELEBRATING -> "You reached your goal today! Thank you for the water!"
+    }
+}
+
 private fun tideLine(state: HydrationState?): String = when {
     state == null -> ""
-    state.quiet -> "Quiet hours — the tide is out"
-    state.level <= 0.005f -> "On pace. Your screen is dry."
+    state.quiet -> "It's your sleep time, so the water is turned off."
+    state.level <= 0.005f -> "You're on track. Your screen is clear."
     else -> {
-        val behind = (state.expectedMl - state.loggedMl).coerceAtLeast(0)
-        "The tide is at ${(state.level * 100).toInt()}% — about $behind ml to clear it"
+        // Rounded to 50 ml: "about 2.4 L" reads better than "about 2420 ml".
+        val behind = ((state.expectedMl - state.loggedMl).coerceAtLeast(0) + 25) / 50 * 50
+        "Water level: ${(state.level * 100).toInt()}%. Drink about ${liters(behind)} to clear your screen."
     }
 }
