@@ -19,7 +19,9 @@ import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.IconButton
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.graphics.Color
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -153,6 +155,19 @@ fun OnboardingScreen(
                     },
                 )
             }
+        }
+        // A labelled way back for people who don't know they can swipe. Invisible (but still taking
+        // its space) on the first page, so the pages don't shift.
+        val canGoBack = pager.currentPage > 0
+        TextButton(
+            onClick = { goTo(pager.currentPage - 1) },
+            enabled = canGoBack,
+            modifier = Modifier.align(Alignment.CenterHorizontally).padding(bottom = 8.dp).alpha(if (canGoBack) 1f else 0f),
+            colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.onSurfaceVariant),
+        ) {
+            Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = null, Modifier.size(18.dp))
+            Spacer(Modifier.width(6.dp))
+            Text("Back")
         }
     }
 }
