@@ -26,8 +26,11 @@ interface DrinkDao {
     @Query("SELECT * FROM drinks WHERE timestamp >= :since ORDER BY timestamp DESC")
     fun observeSince(since: Long): Flow<List<Drink>>
 
-    @Query("DELETE FROM drinks WHERE id = (SELECT id FROM drinks ORDER BY timestamp DESC LIMIT 1)")
-    suspend fun deleteLatest()
+    @Query("SELECT * FROM drinks WHERE timestamp >= :since ORDER BY timestamp DESC LIMIT 1")
+    suspend fun latestSince(since: Long): Drink?
+
+    @Query("DELETE FROM drinks WHERE id = :id")
+    suspend fun delete(id: Long)
 }
 
 @Database(entities = [Drink::class], version = 1, exportSchema = false)

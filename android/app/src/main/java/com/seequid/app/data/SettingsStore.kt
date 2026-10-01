@@ -28,6 +28,8 @@ data class AppSettings(
     val overlayEnabled: Boolean = false,
     val onboardingDone: Boolean = false,
     val paywallSeen: Boolean = false,
+    /** The first time water shows over other apps, Seequid explains what it is. */
+    val waterIntroShown: Boolean = false,
 ) {
     companion object {
         const val DEFAULT_OPACITY = 0.55f
@@ -51,6 +53,7 @@ class SettingsStore(private val context: Context) {
         val overlay = booleanPreferencesKey("overlay_enabled")
         val onboarding = booleanPreferencesKey("onboarding_done")
         val paywallSeen = booleanPreferencesKey("paywall_seen")
+        val waterIntro = booleanPreferencesKey("water_intro_shown")
     }
 
     val settings: Flow<AppSettings> = context.dataStore.data.map { it.toSettings() }
@@ -72,6 +75,7 @@ class SettingsStore(private val context: Context) {
             overlayEnabled = this[Keys.overlay] ?: false,
             onboardingDone = this[Keys.onboarding] ?: false,
             paywallSeen = this[Keys.paywallSeen] ?: false,
+            waterIntroShown = this[Keys.waterIntro] ?: false,
         )
     }
 
@@ -99,6 +103,7 @@ class SettingsStore(private val context: Context) {
     suspend fun setOverlayEnabled(enabled: Boolean) = edit { it[Keys.overlay] = enabled }
     suspend fun setOnboardingDone() = edit { it[Keys.onboarding] = true }
     suspend fun setPaywallSeen() = edit { it[Keys.paywallSeen] = true }
+    suspend fun setWaterIntroShown() = edit { it[Keys.waterIntro] = true }
 
     private suspend fun edit(block: (MutablePreferences) -> Unit) {
         context.dataStore.edit { block(it) }

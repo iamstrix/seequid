@@ -20,6 +20,7 @@ import android.view.View
 import android.view.WindowInsets
 import android.view.WindowManager
 import android.widget.ImageView
+import android.widget.Toast
 import androidx.core.app.NotificationCompat
 import androidx.core.app.ServiceCompat
 import androidx.core.content.ContextCompat
@@ -31,6 +32,7 @@ import com.seequid.app.data.AppSettings
 import com.seequid.app.domain.HydrationState
 import com.seequid.app.ui.MainActivity
 import com.seequid.app.ui.QuickLogActivity
+import com.seequid.app.ui.amount
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
@@ -54,6 +56,10 @@ class OverlayService : LifecycleService() {
     private lateinit var handleParams: WindowManager.LayoutParams
 
     private var screenOn = true
+    /** Seequid itself is open and shows its own water, so the overlay hides. */
+    private var appOpen = false
+    /** Guards the one-time water explanation until the setting round-trips. */
+    private var introPosted = false
     private var last: Triple<HydrationState, AppSettings, Boolean>? = null
 
     private val screenReceiver = object : BroadcastReceiver() {
@@ -119,6 +125,12 @@ class OverlayService : LifecycleService() {
             }
         }
         lifecycleScope.launch {
+            c.appInForeground.collect { open ->
+                appOpen = open
+                last?.let { (state, settings, pro) -> render(state, settings, pro) }
+            }
+        }
+        lifecycleScope.launch {
             c.hydration.state
                 .map { it.loggedMl to it.goalMl }
                 .distinctUntilChanged()
@@ -179,7 +191,12 @@ class OverlayService : LifecycleService() {
     private fun render(state: HydrationState, settings: AppSettings, isPro: Boolean) {
         if (!::water.isInitialized) return
         val skin = if (settings.skin.isPro && !isPro) LiquidSkin.WATER else settings.skin
-        val visible = !state.quiet && state.level > 0.005f
+        val visible = !state.quiet && state.level > 0.005f && !appOpen
+        if (visible && !settings.waterIntroShown && !introPosted) {
+            introPosted = true
+            lifecycleScope.launch { container.settings.setWaterIntroShown() }
+            explainWater()
+        }
         val area = usableArea()
         // The water runs from the very bottom edge, under the nav bar. The system
         // draws the nav buttons above overlays, so they stay visible and tappable.
@@ -305,7 +322,30 @@ class OverlayService : LifecycleService() {
         val channel = NotificationChannel(
             CHANNEL_ID, getString(R.string.channel_name), NotificationManager.IMPORTANCE_LOW,
         ).apply { description = getString(R.string.channel_description) }
-        getSystemService(NotificationManager::class.java).createNotificationChannel(channel)
+        // Tips can actually show up on screen; the ongoing overlay notification stays quiet.
+        val tips = NotificationChannel(
+            TIPS_CHANNEL_ID, getString(R.string.tips_channel_name), NotificationManager.IMPORTANCE_DEFAULT,
+        )
+        getSystemService(NotificationManager::class.java).createNotificationChannels(listOf(channel, tips))
+    }
+
+    /**
+     * The first time water rises over another app, say what it is, so nobody thinks their phone is broken.
+     */
+    private fun explainWater() {
+        Toast.makeText(this, R.string.water_intro_title, Toast.LENGTH_LONG).show()
+        val open = PendingIntent.getActivity(
+            this, 3, Intent(this, MainActivity::class.java), PendingIntent.FLAG_IMMUTABLE,
+        )
+        val note = NotificationCompat.Builder(this, TIPS_CHANNEL_ID)
+            .setSmallIcon(R.drawable.ic_drop)
+            .setContentTitle(getString(R.string.water_intro_title))
+            .setContentText(getString(R.string.water_intro_text))
+            .setStyle(NotificationCompat.BigTextStyle().bigText(getString(R.string.water_intro_text)))
+            .setContentIntent(open)
+            .setAutoCancel(true)
+            .build()
+        getSystemService(NotificationManager::class.java).notify(INTRO_NOTIFICATION_ID, note)
     }
 
     private fun buildNotification(progress: Pair<Int, Int>?): Notification {
@@ -320,7 +360,7 @@ class OverlayService : LifecycleService() {
             this, 2, Intent(this, OverlayService::class.java).setAction(ACTION_PAUSE),
             PendingIntent.FLAG_IMMUTABLE,
         )
-        val text = progress?.let { (logged, goal) -> getString(R.string.notification_progress, logged, goal) }
+        val text = progress?.let { (logged, goal) -> getString(R.string.notification_progress, amount(logged), amount(goal)) }
             ?: getString(R.string.notification_text)
         return NotificationCompat.Builder(this, CHANNEL_ID)
             .setSmallIcon(R.drawable.ic_drop)
@@ -339,6 +379,8 @@ class OverlayService : LifecycleService() {
 
     companion object {
         private const val CHANNEL_ID = "overlay"
+        private const val TIPS_CHANNEL_ID = "tips"
+        private const val INTRO_NOTIFICATION_ID = 2
         private const val NOTIFICATION_ID = 1
         private const val ACTION_LOG = "com.seequid.app.action.LOG"
         private const val ACTION_PAUSE = "com.seequid.app.action.PAUSE"

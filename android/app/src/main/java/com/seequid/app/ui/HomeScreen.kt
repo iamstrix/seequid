@@ -24,7 +24,6 @@ import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Surface
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.res.painterResource
@@ -48,7 +47,8 @@ import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.automirrored.filled.Undo
 import androidx.compose.material3.Card
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FilledTonalButton
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.ListItem
@@ -80,7 +80,6 @@ fun HomeScreen(
     onLog: (Int) -> Unit,
     onUndo: () -> Unit,
     onOverlayToggle: (Boolean) -> Unit,
-    onDemoToggle: (Boolean) -> Unit,
     onOpenSkins: () -> Unit,
     onOpenSettings: () -> Unit,
     onUpgrade: () -> Unit,
@@ -145,7 +144,7 @@ fun HomeScreen(
                         // Break out of the screen padding so the water runs edge to edge.
                         Modifier.requiredWidth(screenWidth).height(260.dp),
                         mood = mood,
-                        drinkTrigger = logged,
+                        drinkTrigger = state?.loggedMl,
                         framed = false,
                         onSquidTap = { tip = squidTip(mood, state) },
                     )
@@ -177,7 +176,7 @@ fun HomeScreen(
                 }
             }
             Text(
-                liters(logged),
+                amount(logged),
                 style = MaterialTheme.typography.displayMedium,
                 fontWeight = FontWeight.Bold,
             )
@@ -216,18 +215,26 @@ fun HomeScreen(
             )
 
             Spacer(Modifier.height(20.dp))
-            Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                JellyButton(onClick = { onLog(250) }, haptic = true, contentPadding = PaddingValues(horizontal = 18.dp)) {
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                JellyButton(onClick = { onLog(250) }, Modifier.weight(1f), haptic = true) {
                     Icon(CupIcon, contentDescription = null, Modifier.size(20.dp))
                     Text("+250 ml")
                 }
-                JellyButton(onClick = { onLog(500) }, haptic = true, contentPadding = PaddingValues(horizontal = 18.dp)) {
+                JellyButton(onClick = { onLog(500) }, Modifier.weight(1f), haptic = true) {
                     Icon(BottleIcon, contentDescription = null, Modifier.size(20.dp))
                     Text("+500 ml")
                 }
-                FilledTonalButton(onClick = onUndo, modifier = Modifier.height(56.dp)) {
-                    Icon(Icons.AutoMirrored.Filled.Undo, contentDescription = "Undo last drink")
-                }
+            }
+            // A labelled undo: an arrow alone means nothing to many people.
+            TextButton(
+                onClick = onUndo,
+                modifier = Modifier.padding(top = 4.dp),
+                // Secondary action: neutral, so coral stays on the drink buttons.
+                colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.onSurfaceVariant),
+            ) {
+                Icon(Icons.AutoMirrored.Filled.Undo, contentDescription = null, Modifier.size(18.dp))
+                Spacer(Modifier.width(6.dp))
+                Text("Undo last drink")
             }
 
             Spacer(Modifier.height(20.dp))
@@ -241,21 +248,6 @@ fun HomeScreen(
                     trailingContent = { Switch(settings.overlayEnabled, onOverlayToggle) },
                     colors = ListItemDefaults.colors(containerColor = Color.Transparent),
                 )
-                HorizontalDivider(Modifier.padding(horizontal = 16.dp), color = MaterialTheme.colorScheme.surfaceVariant)
-                Row(
-                    Modifier.fillMaxWidth().padding(start = 16.dp, end = 8.dp, top = 4.dp, bottom = 4.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    Column(Modifier.weight(1f)) {
-                        Text("Demo mode", style = MaterialTheme.typography.labelLarge)
-                        Text(
-                            "Speeds up a full day into 10 minutes, for testing",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
-                    }
-                    Switch(settings.hydration.demoMode, onDemoToggle, Modifier.scale(0.8f))
-                }
             }
 
             Spacer(Modifier.height(16.dp))
@@ -282,17 +274,23 @@ fun HomeScreen(
     }
 }
 
+/**
+ * An amount to ask the user to drink, rounded to 50 ml ("about 2.4 L" reads better than "about 2420 ml").
+ * Never below 50 ml: whenever we ask for a drink there is something to drink, and "about 0 ml" looks broken.
+ */
+private fun roundedSip(ml: Int): Int = ((ml.coerceAtLeast(0) + 25) / 50 * 50).coerceAtLeast(50)
+
 /** What the squid says when tapped: plain advice that matches its mood. */
 private fun squidTip(mood: SquidMood, state: HydrationState?): String {
-    val behind = state?.let { ((it.expectedMl - it.loggedMl).coerceAtLeast(0) + 25) / 50 * 50 } ?: 0
-    val toGoal = state?.let { ((it.goalMl - it.loggedMl).coerceAtLeast(0) + 25) / 50 * 50 } ?: 0
+    val behind = state?.let { roundedSip(it.expectedMl - it.loggedMl) } ?: 0
+    val toGoal = state?.let { roundedSip(it.goalMl - it.loggedMl) } ?: 0
     val almostThere = state != null && state.loggedMl >= state.goalMl * ALMOST_THERE
     return when (mood) {
         SquidMood.HAPPY ->
-            if (almostThere) "Almost there! Drink about ${liters(toGoal)} more to reach your goal."
+            if (almostThere) "Almost there! Drink about ${amount(toGoal)} more to reach your goal."
             else "You're doing great! Keep drinking a little at a time."
-        SquidMood.WORRIED -> "The water is starting to rise. Drink about ${liters(behind)} to bring it down."
-        SquidMood.THIRSTY -> "The water is rising fast! Drink about ${liters(behind)} to clear your screen."
+        SquidMood.WORRIED -> "The water is starting to rise. Drink about ${amount(behind)} to bring it down."
+        SquidMood.THIRSTY -> "The water is rising fast! Drink about ${amount(behind)} to clear your screen."
         SquidMood.SLEEPING -> "Shh... it's sleep time. See you in the morning!"
         SquidMood.CELEBRATING -> "You reached your goal today! Thank you for the water!"
     }
@@ -303,8 +301,7 @@ private fun tideLine(state: HydrationState?): String = when {
     state.quiet -> "It's your sleep time, so the water is turned off."
     state.level <= 0.005f -> "You're on track. Your screen is clear."
     else -> {
-        // Rounded to 50 ml: "about 2.4 L" reads better than "about 2420 ml".
-        val behind = ((state.expectedMl - state.loggedMl).coerceAtLeast(0) + 25) / 50 * 50
-        "Water level: ${(state.level * 100).toInt()}%. Drink about ${liters(behind)} to clear your screen."
+        val behind = roundedSip(state.expectedMl - state.loggedMl)
+        "Your screen is ${(state.level * 100).toInt()}% covered. Drink about ${amount(behind)} to clear it."
     }
 }

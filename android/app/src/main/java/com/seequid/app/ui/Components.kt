@@ -24,7 +24,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.rememberUpdatedState
@@ -67,8 +67,11 @@ fun Glass(
     modifier: Modifier = Modifier,
     showSquid: Boolean = true,
     mood: SquidMood = if (fill >= 1f) SquidMood.CELEBRATING else SquidMood.HAPPY,
-    /** Logged ml (or any counter): when it goes up, the squid hops and the water splashes. */
-    drinkTrigger: Int = 0,
+    /**
+     * Logged ml: when it goes up, the squid hops and the water splashes. Null while loading; the first
+     * real value is only a baseline, so opening the app doesn't fake a drink.
+     */
+    drinkTrigger: Int? = null,
     framed: Boolean = true,
     onSquidTap: (() -> Unit)? = null,
 ) {
@@ -84,13 +87,15 @@ fun Glass(
     )
     // 0..1 progress of the last splash; 1 means idle.
     val splash = remember { Animatable(1f) }
-    var lastTrigger by remember { mutableIntStateOf(drinkTrigger) }
+    var lastTrigger by remember { mutableStateOf<Int?>(null) }
     LaunchedEffect(drinkTrigger) {
-        if (drinkTrigger > lastTrigger) {
+        val previous = lastTrigger
+        if (drinkTrigger == null) return@LaunchedEffect
+        lastTrigger = drinkTrigger
+        if (previous != null && drinkTrigger > previous) {
             splash.snapTo(0f)
             splash.animateTo(1f, tween(900, easing = LinearOutSlowInEasing))
         }
-        lastTrigger = drinkTrigger
     }
     val wiggle = remember { Animatable(1f) }
     val scope = rememberCoroutineScope()
@@ -189,6 +194,9 @@ fun Glass(
 /** 1750 -> "1.75 L", 1600 -> "1.6 L", 250 -> "0.25 L". */
 fun liters(ml: Int): String =
     String.format(Locale.US, "%.2f", ml / 1000f).trimEnd('0').trimEnd('.') + " L"
+
+/** One rule for amounts everywhere: under 1 L in ml ("200 ml"), from 1 L in liters ("1.25 L"). */
+fun amount(ml: Int): String = if (ml < 1000) "$ml ml" else liters(ml)
 
 /** 7 -> "7:00 AM", 23 -> "11:00 PM", 24 -> "12:00 AM". */
 fun clock(hour: Int): String =

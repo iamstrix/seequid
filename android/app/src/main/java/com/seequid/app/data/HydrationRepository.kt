@@ -1,11 +1,13 @@
 package com.seequid.app.data
 
 import com.seequid.app.domain.HydrationCalculator
+import com.seequid.app.domain.HydrationSettings
 import com.seequid.app.domain.HydrationState
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.map
 import java.time.Instant
@@ -39,12 +41,7 @@ class HydrationRepository(
             val zone = ZoneId.systemDefault()
             val local = Instant.ofEpochMilli(now).atZone(zone)
             val minuteOfDay = local.hour * 60 + local.minute + local.second / 60.0
-            val since = if (h.demoMode) h.demoStartedAt else {
-                // The hydration day starts at the boundary (midnight, or a past-midnight bedtime).
-                val boundary = HydrationCalculator.dayBoundaryMinute(h)
-                val date = if (minuteOfDay < boundary) local.toLocalDate().minusDays(1) else local.toLocalDate()
-                date.atStartOfDay(zone).plusMinutes(boundary.toLong()).toInstant().toEpochMilli()
-            }
+            val since = periodStart(h, now)
             val logged = drinks.filter { it.timestamp >= since }.sumOf { it.amountMl }
             HydrationCalculator.state(h, now, minuteOfDay, logged)
         }.distinctUntilChanged()
@@ -63,7 +60,27 @@ class HydrationRepository(
     suspend fun log(amountMl: Int) =
         dao.insert(Drink(timestamp = System.currentTimeMillis(), amountMl = amountMl))
 
-    suspend fun undoLast() = dao.deleteLatest()
+    /**
+     * Removes the latest drink of the current day (never one from an earlier day).
+     * @return the amount removed, or null when there was nothing to undo today.
+     */
+    suspend fun undoLast(): Int? {
+        val h = settingsStore.settings.first().hydration
+        val drink = dao.latestSince(periodStart(h, System.currentTimeMillis())) ?: return null
+        dao.delete(drink.id)
+        return drink.amountMl
+    }
+
+    /** Start of the period whose drinks count: the demo start, or the hydration day (midnight or a late bedtime). */
+    private fun periodStart(h: HydrationSettings, now: Long): Long {
+        if (h.demoMode) return h.demoStartedAt
+        val zone = ZoneId.systemDefault()
+        val local = Instant.ofEpochMilli(now).atZone(zone)
+        val minuteOfDay = local.hour * 60 + local.minute
+        val boundary = HydrationCalculator.dayBoundaryMinute(h)
+        val date = if (minuteOfDay < boundary) local.toLocalDate().minusDays(1) else local.toLocalDate()
+        return date.atStartOfDay(zone).plusMinutes(boundary.toLong()).toInstant().toEpochMilli()
+    }
 
     private companion object {
         const val DAY_MS = 24 * 60 * 60 * 1000L

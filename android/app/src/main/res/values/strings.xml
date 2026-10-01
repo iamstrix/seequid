@@ -5,8 +5,11 @@
     <string name="channel_description">Keeps the water on your screen and lets you log a drink from here</string>
     <string name="notification_title">Seequid is on</string>
     <string name="notification_text">Drink water to keep your screen clear</string>
-    <string name="notification_progress">%1$d of %2$d ml today</string>
+    <string name="notification_progress">%1$s of %2$s today</string>
     <string name="action_log">+%1$d ml</string>
     <string name="action_pause">Pause</string>
     <string name="handle_description">Log a drink</string>
+    <string name="tips_channel_name">Tips</string>
+    <string name="water_intro_title">This blue water is from Seequid</string>
+    <string name="water_intro_text">It rises when you need to drink. Drink some water, then tap the drop button to log it. The water will go down. Your phone is working normally.</string>
 </resources>

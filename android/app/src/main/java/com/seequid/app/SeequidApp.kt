@@ -9,6 +9,7 @@ import com.seequid.app.data.SettingsStore
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.launch
 
 /** Manual dependency wiring; the app is small enough not to need a DI framework. */
@@ -17,6 +18,8 @@ class AppContainer(context: Context) {
     val settings = SettingsStore(context)
     val hydration = HydrationRepository(SeequidDatabase.create(context).drinks(), settings)
     val billing = BillingRepository(context)
+    /** True while the main app is on screen: it shows its own water, so the overlay steps aside. */
+    val appInForeground = MutableStateFlow(false)
 }
 
 class SeequidApp : Application() {

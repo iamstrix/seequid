@@ -29,6 +29,9 @@ import androidx.lifecycle.compose.LifecycleResumeEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.revenuecat.purchases.ui.revenuecatui.PaywallDialog
 import com.revenuecat.purchases.ui.revenuecatui.PaywallDialogOptions
+import com.revenuecat.purchases.ui.revenuecatui.PaywallListener
+import com.revenuecat.purchases.CustomerInfo
+import com.revenuecat.purchases.models.StoreTransaction
 import com.revenuecat.purchases.ui.revenuecatui.customercenter.CustomerCenter
 import com.seequid.app.billing.BillingRepository
 import com.seequid.app.container
@@ -46,6 +49,17 @@ class MainActivity : ComponentActivity() {
                 }
             }
         }
+    }
+
+    // Visible, not just resumed: the paywall and system dialogs shouldn't bring the overlay back.
+    override fun onStart() {
+        super.onStart()
+        container.appInForeground.value = true
+    }
+
+    override fun onStop() {
+        container.appInForeground.value = false
+        super.onStop()
     }
 }
 
@@ -70,6 +84,8 @@ private fun SeequidRoot() {
     }
 
     var showPaywall by rememberSaveable { mutableStateOf(false) }
+    /** Set right after a purchase: which plan to celebrate. */
+    var celebrate by rememberSaveable { mutableStateOf<ProPlan?>(null) }
     var screen by rememberSaveable { mutableStateOf(Screen.Home) }
 
     val s = settings ?: return
@@ -79,11 +95,7 @@ private fun SeequidRoot() {
         if (s.overlayEnabled && canDrawOverlays) OverlayService.start(context) else OverlayService.stop(context)
     }
 
-    fun openOverlayPermission() {
-        context.startActivity(
-            Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION, Uri.parse("package:${context.packageName}"))
-        )
-    }
+    fun openOverlayPermission() = context.requestOverlayPermission(scope)
 
     fun toast(text: String) = Toast.makeText(context, text, Toast.LENGTH_SHORT).show()
 
@@ -102,12 +114,16 @@ private fun SeequidRoot() {
                 week = week,
                 canDrawOverlays = canDrawOverlays,
                 onLog = { ml -> scope.launch { c.hydration.log(ml) } },
-                onUndo = { scope.launch { c.hydration.undoLast() } },
+                onUndo = {
+                    scope.launch {
+                        val removed = c.hydration.undoLast()
+                        toast(if (removed != null) "Removed ${amount(removed)}" else "There's nothing to undo today")
+                    }
+                },
                 onOverlayToggle = { on ->
                     if (on && !canDrawOverlays) openOverlayPermission()
                     scope.launch { c.settings.setOverlayEnabled(on) }
                 },
-                onDemoToggle = { on -> scope.launch { c.settings.setDemoMode(on) } },
                 onOpenSkins = { screen = Screen.Skins },
                 onOpenSettings = { screen = Screen.Settings },
                 onUpgrade = { showPaywall = true },
@@ -125,6 +141,7 @@ private fun SeequidRoot() {
                 onGoal = { ml -> scope.launch { c.settings.setGoal(ml) } },
                 onWakeHours = { wake, sleep -> scope.launch { c.settings.setWakeHours(wake, sleep) } },
                 onScheduleEnabled = { on -> scope.launch { c.settings.setScheduleEnabled(on) } },
+                onDemoToggle = { on -> scope.launch { c.settings.setDemoMode(on) } },
                 onOpacity = { v -> scope.launch { c.settings.setOpacity(v) } },
                 onThreshold = { v -> scope.launch { c.settings.setHandleThreshold(v) } },
                 onManageSubscription = {
@@ -157,6 +174,11 @@ private fun SeequidRoot() {
                 PaywallDialogOptions.Builder()
                     .setRequiredEntitlementIdentifier(BillingRepository.ENTITLEMENT_PRO)
                     .setDismissRequest(dismiss)
+                    .setListener(object : PaywallListener {
+                        override fun onPurchaseCompleted(customerInfo: CustomerInfo, storeTransaction: StoreTransaction) {
+                            celebrate = proPlanFor(storeTransaction.productIds)
+                        }
+                    })
                     .build()
             )
         } else {
@@ -168,4 +190,6 @@ private fun SeequidRoot() {
             )
         }
     }
+
+    celebrate?.let { plan -> ProCelebration(plan) { celebrate = null } }
 }

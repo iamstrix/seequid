@@ -61,6 +61,7 @@ fun SettingsScreen(
     onGoal: (Int) -> Unit,
     onWakeHours: (wakeMinute: Int, sleepMinute: Int) -> Unit,
     onScheduleEnabled: (Boolean) -> Unit,
+    onDemoToggle: (Boolean) -> Unit,
     onOpacity: (Float) -> Unit,
     onThreshold: (Float) -> Unit,
     onManageSubscription: () -> Unit,
@@ -140,6 +141,16 @@ fun SettingsScreen(
                 )
             }
 
+            SectionTitle("For testing")
+            Card(Modifier.fillMaxWidth()) {
+                ListItem(
+                    headlineContent = { Text("Demo mode") },
+                    supportingContent = { Text("Speeds up a full day into 10 minutes, so you can watch the water rise.") },
+                    trailingContent = { Switch(settings.hydration.demoMode, onDemoToggle) },
+                    colors = ListItemDefaults.colors(containerColor = Color.Transparent),
+                )
+            }
+
             Text(
                 "Seequid helps you build a habit. It is not medical advice. The daily goal can't go above 4 L, " +
                     "because drinking much more water than you need can be harmful. If you have a heart or " +
@@ -177,7 +188,7 @@ private fun ProCard(isPro: Boolean, onUpgrade: () -> Unit, onManage: () -> Unit,
         }
         Row(Modifier.padding(start = 16.dp, end = 16.dp, bottom = 12.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             if (isPro) {
-                FilledTonalButton(onClick = onManage) { Text("Manage subscription") }
+                FilledTonalButton(onClick = onManage) { Text("Manage or cancel") }
             } else {
                 JellyButton(onClick = onUpgrade, glow = false, height = 44.dp) { Text("Go Pro") }
             }
