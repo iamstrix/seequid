@@ -1,6 +1,15 @@
 package com.seequid.app.ui
 
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.lazy.grid.GridItemSpan
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material3.Button
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.Surface
+import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -57,28 +66,61 @@ fun SkinsScreen(
             verticalArrangement = Arrangement.spacedBy(12.dp),
             modifier = Modifier.padding(padding),
         ) {
+            if (!isPro) {
+                item(span = { GridItemSpan(maxLineSpan) }) {
+                    Card(
+                        onClick = onLocked,
+                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.16f)),
+                    ) {
+                        Row(Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
+                            Column(Modifier.weight(1f)) {
+                                Text("Unlock 4 more liquids", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                                Text("Matcha, cold brew, boba and night lagoon — on your overlay too",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            }
+                            Spacer(Modifier.width(12.dp))
+                            Button(onClick = onLocked) { Text("Go Pro") }
+                        }
+                    }
+                }
+            }
             items(LiquidSkin.entries) { skin ->
                 val locked = skin.isPro && !isPro
                 val isSelected = skin == selected && !locked
                 Card(
                     onClick = { if (locked) onLocked() else onSelect(skin) },
-                    border = if (isSelected) BorderStroke(2.dp, MaterialTheme.colorScheme.primary) else null,
+                    border = if (isSelected) BorderStroke(3.dp, MaterialTheme.colorScheme.primary) else null,
                 ) {
-                    Column(Modifier.padding(12.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-                        Glass(0.6f, skin, Modifier.fillMaxWidth().height(120.dp))
-                        Spacer(Modifier.height(10.dp))
-                        Row(verticalAlignment = Alignment.CenterVertically) {
+                    Box {
+                        Column(
+                            Modifier.padding(start = 12.dp, end = 12.dp, top = 28.dp, bottom = 12.dp),
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                        ) {
+                            Glass(0.6f, skin, Modifier.fillMaxWidth().height(120.dp).alpha(if (locked) 0.5f else 1f))
+                            Spacer(Modifier.height(10.dp))
                             Text(skin.displayName, style = MaterialTheme.typography.titleSmall)
-                            Spacer(Modifier.width(6.dp))
-                            when {
-                                locked -> Icon(Icons.Default.Lock, "Pro", Modifier.height(16.dp))
-                                isSelected -> Icon(Icons.Default.CheckCircle, "Selected", Modifier.height(16.dp),
+                        }
+                        Row(
+                            Modifier.align(Alignment.TopEnd).padding(8.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            if (skin.isPro) {
+                                Surface(shape = CircleShape, color = MaterialTheme.colorScheme.primary) {
+                                    Text("PRO", Modifier.padding(horizontal = 8.dp, vertical = 2.dp),
+                                        style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold,
+                                        color = MaterialTheme.colorScheme.onPrimary)
+                                }
+                            }
+                            if (locked) {
+                                Spacer(Modifier.width(4.dp))
+                                Icon(Icons.Default.Lock, "Locked", Modifier.size(18.dp))
+                            }
+                            if (isSelected) {
+                                Spacer(Modifier.width(4.dp))
+                                Icon(Icons.Default.CheckCircle, "Selected", Modifier.size(20.dp),
                                     tint = MaterialTheme.colorScheme.primary)
                             }
-                        }
-                        if (skin.isPro) {
-                            Text("Pro", style = MaterialTheme.typography.labelSmall,
-                                color = MaterialTheme.colorScheme.secondary)
                         }
                     }
                 }

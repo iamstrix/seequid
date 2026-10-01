@@ -7,7 +7,22 @@ import android.os.Build
 import android.provider.Settings
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedContent
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.PauseCircle
+import androidx.compose.material.icons.filled.TouchApp
+import androidx.compose.material.icons.filled.VisibilityOff
+import androidx.compose.material3.Card
+import androidx.compose.material3.Icon
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.res.painterResource
+import com.seequid.app.R
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -23,7 +38,6 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Slider
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -67,12 +81,15 @@ fun OnboardingScreen(
         ActivityResultContracts.RequestPermission()
     ) { }
 
+    BackHandler(enabled = step > 0) { step-- }
+
     Box(Modifier.fillMaxSize().safeDrawingPadding().padding(24.dp)) {
-        AnimatedContent(targetState = step, label = "onboarding") { current ->
+        StepDots(step, total = 4, Modifier.align(Alignment.TopCenter).padding(top = 8.dp))
+        AnimatedContent(targetState = step, label = "onboarding", modifier = Modifier.padding(top = 24.dp)) { current ->
             when (current) {
                 0 -> Page(
                     title = "Your screen is thirsty",
-                    body = "seequid slowly fills your phone with water as the day goes on. " +
+                    body = "Seequid slowly fills your phone with water as the day goes on. " +
                         "Fall behind and the tide rises over everything you do. Drink, and it drains away.",
                     demoFill = 0.45f,
                     primary = "Show me how" to { step = 1 },
@@ -195,31 +212,73 @@ private fun GoalPage(settings: AppSettings, onNext: (goal: Int, wake: Int, sleep
 
 @Composable
 private fun PermissionPage(granted: Boolean, onGrant: () -> Unit, onStart: () -> Unit) {
-    Column(Modifier.fillMaxSize(), verticalArrangement = Arrangement.Center) {
+    Column(
+        Modifier.fillMaxSize(),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center,
+    ) {
+        Image(
+            painterResource(R.mipmap.ic_launcher_foreground), contentDescription = null,
+            Modifier.size(96.dp).clip(RoundedCornerShape(28.dp)).graphicsLayer(scaleX = 1.5f, scaleY = 1.5f),
+        )
+        Spacer(Modifier.height(24.dp))
         Text("Let the water in", style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
-        Spacer(Modifier.height(12.dp))
+        Spacer(Modifier.height(8.dp))
         Text(
-            "seequid needs “Display over other apps” to draw the water above your screen.\n\n" +
-                "• It never reads what's on your screen.\n" +
-                "• Your taps go straight through the water.\n" +
-                "• Pause it any time from the notification.",
+            "Seequid needs “Display over other apps” to draw the water above your screen.",
             style = MaterialTheme.typography.bodyLarge,
+            textAlign = TextAlign.Center,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
+        Spacer(Modifier.height(20.dp))
+        Card(Modifier.fillMaxWidth()) {
+            Column(Modifier.padding(vertical = 8.dp)) {
+                Reassurance(Icons.Default.VisibilityOff, "It never reads what's on your screen")
+                Reassurance(Icons.Default.TouchApp, "Your taps go straight through the water")
+                Reassurance(Icons.Default.PauseCircle, "Pause it any time from the notification")
+            }
+        }
         Spacer(Modifier.height(28.dp))
         if (!granted) {
             Button(onClick = onGrant, modifier = Modifier.fillMaxWidth()) { Text("Open settings") }
             Spacer(Modifier.height(8.dp))
-            Text("Find seequid in the list and switch it on, then come back.",
+            Text("Find Seequid in the list and switch it on, then come back.",
                 style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Spacer(Modifier.height(8.dp))
+            TextButton(onClick = onStart, modifier = Modifier.fillMaxWidth()) { Text("Skip for now") }
         } else {
+            Surface(shape = CircleShape, color = MaterialTheme.colorScheme.secondary.copy(alpha = 0.18f)) {
+                Row(Modifier.padding(horizontal = 14.dp, vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Icon(Icons.Default.CheckCircle, null, Modifier.size(18.dp), tint = MaterialTheme.colorScheme.secondary)
+                    Spacer(Modifier.width(6.dp))
+                    Text("Permission granted", color = MaterialTheme.colorScheme.secondary, fontWeight = FontWeight.Bold)
+                }
+            }
+            Spacer(Modifier.height(16.dp))
             Button(onClick = onStart, modifier = Modifier.fillMaxWidth()) { Text("Start the tide") }
         }
-        Spacer(Modifier.height(8.dp))
-        if (!granted) {
-            OutlinedButton(onClick = onStart, modifier = Modifier.fillMaxWidth()) { Text("Skip for now") }
-        } else {
-            TextButton(onClick = {}, enabled = false, modifier = Modifier.fillMaxWidth()) { Text("Permission granted ✓") }
+    }
+}
+
+@Composable
+private fun Reassurance(icon: ImageVector, text: String) {
+    Row(Modifier.padding(horizontal = 16.dp, vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
+        Icon(icon, null, tint = MaterialTheme.colorScheme.primary)
+        Spacer(Modifier.width(14.dp))
+        Text(text, style = MaterialTheme.typography.bodyMedium)
+    }
+}
+
+@Composable
+private fun StepDots(step: Int, total: Int, modifier: Modifier = Modifier) {
+    Row(modifier, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        repeat(total) { i ->
+            val active = i == step
+            Surface(
+                shape = CircleShape,
+                color = if (i <= step) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant,
+                modifier = Modifier.height(8.dp).width(if (active) 24.dp else 8.dp),
+            ) {}
         }
     }
 }

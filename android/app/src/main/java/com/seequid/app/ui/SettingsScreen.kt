@@ -1,6 +1,25 @@
 package com.seequid.app.ui
 
-import androidx.compose.foundation.clickable
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.ColumnScope
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.Button
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.FilledTonalButton
+import androidx.compose.material3.TextButton
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.font.FontWeight
+import com.seequid.app.R
+import java.util.Locale
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.height
@@ -10,10 +29,8 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.ListItem
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Slider
@@ -54,62 +71,38 @@ fun SettingsScreen(
             )
         },
     ) { padding ->
-        Column(Modifier.padding(padding).verticalScroll(rememberScrollState())) {
+        Column(Modifier.padding(padding).padding(horizontal = 16.dp).verticalScroll(rememberScrollState())) {
             // Sliders keep a local value while dragging and save on release.
             var goal by remember(settings.hydration.dailyGoalMl) { mutableFloatStateOf(settings.hydration.dailyGoalMl.toFloat()) }
             var opacity by remember(settings.opacity) { mutableFloatStateOf(settings.opacity) }
             var threshold by remember(settings.handleThreshold) { mutableFloatStateOf(settings.handleThreshold) }
 
+            ProCard(isPro, onUpgrade = onUpgrade, onManage = onManageSubscription, onRestore = onRestore)
+
             SectionTitle("Pace")
-            SliderRow("Daily goal: ${(goal / 50).roundToInt() * 50} ml", goal,
-                HydrationCalculator.MIN_GOAL_ML.toFloat()..HydrationCalculator.MAX_GOAL_ML.toFloat(),
-                { goal = it }, { onGoal((goal / 50).roundToInt() * 50) })
-            Text(
-                "Waking hours: ${settings.hydration.wakeMinute / 60}:00–${settings.hydration.sleepMinute / 60}:00 " +
-                    "(no water outside them)",
-                Modifier.padding(horizontal = 16.dp),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
+            SettingsCard {
+                SliderRow("Daily goal: ${liters((goal / 50).roundToInt() * 50)}", goal,
+                    HydrationCalculator.MIN_GOAL_ML.toFloat()..HydrationCalculator.MAX_GOAL_ML.toFloat(),
+                    { goal = it }, { onGoal((goal / 50).roundToInt() * 50) })
+                Hint("Waking hours: ${settings.hydration.wakeMinute / 60}:00–${settings.hydration.sleepMinute / 60}:00 " +
+                    "(no water outside them)")
+            }
 
             SectionTitle("Water")
-            SliderRow("Opacity: ${(opacity * 100).roundToInt()}%", opacity,
-                AppSettings.MIN_OPACITY..AppSettings.MAX_OPACITY, { opacity = it }, { onOpacity(opacity) })
-            Text(
-                "Kept below 80% on purpose — above that, Android stops your taps from reaching the app underneath.",
-                Modifier.padding(horizontal = 16.dp),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-            SliderRow("Show the drop at ${(threshold * 100).roundToInt()}% water", threshold,
-                0.1f..0.9f, { threshold = it }, { onThreshold(threshold) })
-
-            HorizontalDivider(Modifier.padding(vertical = 8.dp))
-            SectionTitle("seequid Pro")
-            if (isPro) {
-                ListItem(
-                    headlineContent = { Text("Manage subscription") },
-                    supportingContent = { Text("Change plan, cancel or get help") },
-                    modifier = Modifier.clickableRow(onManageSubscription),
-                )
-            } else {
-                ListItem(
-                    headlineContent = { Text("Upgrade to Pro") },
-                    supportingContent = { Text("All liquids and your drinking history") },
-                    modifier = Modifier.clickableRow(onUpgrade),
-                )
+            SettingsCard {
+                SliderRow("Opacity: ${(opacity * 100).roundToInt()}%", opacity,
+                    AppSettings.MIN_OPACITY..AppSettings.MAX_OPACITY, { opacity = it }, { onOpacity(opacity) })
+                Hint("Kept below 80% on purpose — above that, Android stops your taps from reaching the app underneath.")
+                Spacer(Modifier.height(12.dp))
+                SliderRow("Show the drop at ${(threshold * 100).roundToInt()}% water", threshold,
+                    0.1f..0.9f, { threshold = it }, { onThreshold(threshold) })
             }
-            ListItem(
-                headlineContent = { Text("Restore purchases") },
-                modifier = Modifier.clickableRow(onRestore),
-            )
 
-            HorizontalDivider(Modifier.padding(vertical = 8.dp))
             Text(
-                "seequid is a habit tool, not medical advice. Daily goals are capped at 4 L because drinking " +
+                "Seequid is a habit tool, not medical advice. Daily goals are capped at 4 L because drinking " +
                     "far beyond your needs can be harmful. If you have a heart or kidney condition, " +
                     "ask your doctor how much to drink.\n\nVersion ${BuildConfig.VERSION_NAME}",
-                Modifier.padding(16.dp),
+                Modifier.padding(horizontal = 20.dp, vertical = 16.dp),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
@@ -119,10 +112,61 @@ fun SettingsScreen(
 }
 
 @Composable
+private fun ProCard(isPro: Boolean, onUpgrade: () -> Unit, onManage: () -> Unit, onRestore: () -> Unit) {
+    Card(
+        Modifier.fillMaxWidth().padding(top = 8.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.16f)),
+    ) {
+        Row(Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
+            Image(
+                painterResource(R.mipmap.ic_launcher_foreground), contentDescription = null,
+                Modifier.size(48.dp).clip(RoundedCornerShape(14.dp)).graphicsLayer(scaleX = 1.5f, scaleY = 1.5f),
+            )
+            Spacer(Modifier.width(14.dp))
+            Column(Modifier.weight(1f)) {
+                Text("Seequid Pro", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                Text(
+                    if (isPro) "Active ✓ — thanks for supporting a student dev" else "All liquids and your drinking history",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+        }
+        Row(Modifier.padding(start = 16.dp, end = 16.dp, bottom = 12.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            if (isPro) {
+                FilledTonalButton(onClick = onManage) { Text("Manage subscription") }
+            } else {
+                Button(onClick = onUpgrade) { Text("Go Pro") }
+            }
+            TextButton(onClick = onRestore) { Text("Restore purchases") }
+        }
+    }
+}
+
+@Composable
+private fun SettingsCard(content: @Composable ColumnScope.() -> Unit) {
+    Card(Modifier.fillMaxWidth()) { Column(Modifier.padding(vertical = 12.dp), content = content) }
+}
+
+@Composable
+private fun Hint(text: String) {
+    Text(
+        text,
+        Modifier.padding(horizontal = 16.dp),
+        style = MaterialTheme.typography.bodySmall,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+    )
+}
+
+/** 1600 -> "1.6 L". */
+private fun liters(ml: Int): String =
+    String.format(Locale.US, "%.2f", ml / 1000f).trimEnd('0').trimEnd('.') + " L"
+
+@Composable
 private fun SectionTitle(text: String) {
     Text(
         text,
-        Modifier.padding(start = 16.dp, top = 16.dp, bottom = 4.dp),
+        Modifier.padding(start = 4.dp, top = 20.dp, bottom = 8.dp),
         style = MaterialTheme.typography.titleSmall,
         color = MaterialTheme.colorScheme.primary,
     )
@@ -142,4 +186,3 @@ private fun SliderRow(
     }
 }
 
-private fun Modifier.clickableRow(onClick: () -> Unit): Modifier = clickable(onClick = onClick)
