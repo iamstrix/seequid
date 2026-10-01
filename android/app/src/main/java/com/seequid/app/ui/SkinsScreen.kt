@@ -5,7 +5,6 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.grid.GridItemSpan
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.material3.Button
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Surface
 import androidx.compose.ui.draw.alpha
@@ -80,7 +79,9 @@ fun SkinsScreen(
                                     color = MaterialTheme.colorScheme.onSurfaceVariant)
                             }
                             Spacer(Modifier.width(12.dp))
-                            Button(onClick = onLocked) { Text("Go Pro") }
+                            JellyButton(onClick = onLocked, glow = false, height = 44.dp, contentPadding = PaddingValues(horizontal = 16.dp)) {
+                                Text("Go Pro")
+                            }
                         }
                     }
                 }

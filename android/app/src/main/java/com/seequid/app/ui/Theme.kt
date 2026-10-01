@@ -16,7 +16,7 @@ import androidx.compose.ui.graphics.Color
 val Aqua = Color(0xFF2E86F5)
 val Cyan = Color(0xFF00D4F0)
 /** The squid's blush; the one accent colour. */
-val Coral = Color(0xFFFF7A85)
+val Coral = Color(0xFFFF7470)
 /** The icon's straw; success states. */
 val Leaf = Color(0xFF7ED957)
 

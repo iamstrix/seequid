@@ -36,7 +36,6 @@ import androidx.compose.foundation.layout.safeDrawingPadding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Slider
 import androidx.compose.material3.Surface
@@ -156,7 +155,7 @@ private fun Page(title: String, body: String, demoFill: Float, primary: Pair<Str
         Text(body, style = MaterialTheme.typography.bodyLarge, textAlign = TextAlign.Center,
             color = MaterialTheme.colorScheme.onSurfaceVariant)
         Spacer(Modifier.height(32.dp))
-        Button(onClick = primary.second, modifier = Modifier.fillMaxWidth()) { Text(primary.first) }
+        JellyButton(onClick = primary.second, modifier = Modifier.fillMaxWidth()) { Text(primary.first) }
     }
 }
 
@@ -218,10 +217,7 @@ private fun GoalPage(settings: AppSettings, onNext: (goal: Int) -> Unit) {
             style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
         Spacer(Modifier.height(24.dp))
-        Button(
-            onClick = { onNext(goalMl) },
-            modifier = Modifier.fillMaxWidth(),
-        ) { Text("Continue") }
+        JellyButton(onClick = { onNext(goalMl) }, modifier = Modifier.fillMaxWidth()) { Text("Continue") }
     }
 }
 
@@ -255,7 +251,7 @@ private fun PermissionPage(granted: Boolean, finishLabel: String, onGrant: () ->
         }
         Spacer(Modifier.height(28.dp))
         if (!granted) {
-            Button(onClick = onGrant, modifier = Modifier.fillMaxWidth()) { Text("Open phone settings") }
+            JellyButton(onClick = onGrant, modifier = Modifier.fillMaxWidth()) { Text("Open phone settings") }
             Spacer(Modifier.height(8.dp))
             Text("In the list, find Seequid and turn it on. Then come back to this app.",
                 style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
@@ -270,7 +266,7 @@ private fun PermissionPage(granted: Boolean, finishLabel: String, onGrant: () ->
                 }
             }
             Spacer(Modifier.height(16.dp))
-            Button(onClick = onStart, modifier = Modifier.fillMaxWidth()) { Text(finishLabel) }
+            JellyButton(onClick = onStart, modifier = Modifier.fillMaxWidth()) { Text(finishLabel) }
         }
     }
 }

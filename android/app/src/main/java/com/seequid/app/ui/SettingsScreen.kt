@@ -13,7 +13,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.FilledTonalButton
@@ -180,7 +179,7 @@ private fun ProCard(isPro: Boolean, onUpgrade: () -> Unit, onManage: () -> Unit,
             if (isPro) {
                 FilledTonalButton(onClick = onManage) { Text("Manage subscription") }
             } else {
-                Button(onClick = onUpgrade) { Text("Go Pro") }
+                JellyButton(onClick = onUpgrade, glow = false, height = 44.dp) { Text("Go Pro") }
             }
             TextButton(onClick = onRestore) { Text("Restore purchases") }
         }

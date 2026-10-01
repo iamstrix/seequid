@@ -46,7 +46,6 @@ import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Palette
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.automirrored.filled.Undo
-import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilledTonalButton
@@ -102,14 +101,15 @@ fun HomeScreen(
                 },
                 actions = {
                     if (!isPro) {
-                        Button(
+                        // Same coral as the drink buttons, but smaller and without the glow, so it doesn't compete.
+                        JellyButton(
                             onClick = onUpgrade,
+                            glow = false,
+                            height = 36.dp,
                             contentPadding = PaddingValues(horizontal = 14.dp),
-                            modifier = Modifier.height(34.dp),
                         ) {
                             Icon(Icons.Default.AutoAwesome, contentDescription = null, Modifier.size(16.dp))
-                            Spacer(Modifier.width(6.dp))
-                            Text("Go Pro", style = MaterialTheme.typography.labelLarge)
+                            Text("Go Pro", style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Bold))
                         }
                     }
                     IconButton(onClick = onOpenSkins) { Icon(Icons.Default.Palette, "Skins") }
@@ -217,9 +217,15 @@ fun HomeScreen(
 
             Spacer(Modifier.height(20.dp))
             Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                Button(onClick = { onLog(250) }) { Text("+250 ml") }
-                Button(onClick = { onLog(500) }) { Text("+500 ml") }
-                FilledTonalButton(onClick = onUndo) {
+                JellyButton(onClick = { onLog(250) }, haptic = true, contentPadding = PaddingValues(horizontal = 18.dp)) {
+                    Icon(CupIcon, contentDescription = null, Modifier.size(20.dp))
+                    Text("+250 ml")
+                }
+                JellyButton(onClick = { onLog(500) }, haptic = true, contentPadding = PaddingValues(horizontal = 18.dp)) {
+                    Icon(BottleIcon, contentDescription = null, Modifier.size(20.dp))
+                    Text("+500 ml")
+                }
+                FilledTonalButton(onClick = onUndo, modifier = Modifier.height(56.dp)) {
                     Icon(Icons.AutoMirrored.Filled.Undo, contentDescription = "Undo last drink")
                 }
             }

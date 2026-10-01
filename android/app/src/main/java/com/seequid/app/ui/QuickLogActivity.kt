@@ -17,7 +17,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.Button
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -60,7 +60,12 @@ class QuickLogActivity : ComponentActivity() {
                             Spacer(Modifier.height(16.dp))
                             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                                 listOf(150, 250, 330, 500).forEach { ml ->
-                                    Button(onClick = { log(ml) }, modifier = Modifier.weight(1f)) { Text("$ml") }
+                                    JellyButton(
+                                        onClick = { log(ml) },
+                                        modifier = Modifier.weight(1f),
+                                        haptic = true,
+                                        contentPadding = PaddingValues(horizontal = 4.dp),
+                                    ) { Text("$ml") }
                                 }
                             }
                             Spacer(Modifier.height(4.dp))
