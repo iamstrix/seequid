@@ -16,7 +16,6 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import com.seequid.app.R
-import java.util.Locale
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -200,10 +199,6 @@ fun HomeScreen(
         }
     }
 }
-
-/** 1750 -> "1.75 L", 1600 -> "1.6 L", 250 -> "0.25 L". */
-private fun liters(ml: Int): String =
-    String.format(Locale.US, "%.2f", ml / 1000f).trimEnd('0').trimEnd('.') + " L"
 
 private fun tideLine(state: HydrationState?): String = when {
     state == null -> ""

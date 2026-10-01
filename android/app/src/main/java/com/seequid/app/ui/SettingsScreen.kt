@@ -1,6 +1,11 @@
 package com.seequid.app.ui
 
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.clickable
+import androidx.compose.material.icons.filled.School
+import androidx.compose.material3.ListItem
+import androidx.compose.material3.ListItemDefaults
+import androidx.compose.ui.graphics.Color
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
@@ -19,7 +24,6 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import com.seequid.app.R
-import java.util.Locale
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.height
@@ -59,6 +63,7 @@ fun SettingsScreen(
     onManageSubscription: () -> Unit,
     onRestore: () -> Unit,
     onUpgrade: () -> Unit,
+    onReplayIntro: () -> Unit,
     onBack: () -> Unit,
 ) {
     Scaffold(
@@ -96,6 +101,17 @@ fun SettingsScreen(
                 Spacer(Modifier.height(12.dp))
                 SliderRow("Show the drop at ${(threshold * 100).roundToInt()}% water", threshold,
                     0.1f..0.9f, { threshold = it }, { onThreshold(threshold) })
+            }
+
+            SectionTitle("Help")
+            Card(Modifier.fillMaxWidth()) {
+                ListItem(
+                    headlineContent = { Text("How Seequid works") },
+                    supportingContent = { Text("Replay the intro — your settings stay as they are") },
+                    leadingContent = { Icon(Icons.Default.School, contentDescription = null) },
+                    colors = ListItemDefaults.colors(containerColor = Color.Transparent),
+                    modifier = Modifier.clickable(onClick = onReplayIntro),
+                )
             }
 
             Text(
@@ -157,10 +173,6 @@ private fun Hint(text: String) {
         color = MaterialTheme.colorScheme.onSurfaceVariant,
     )
 }
-
-/** 1600 -> "1.6 L". */
-private fun liters(ml: Int): String =
-    String.format(Locale.US, "%.2f", ml / 1000f).trimEnd('0').trimEnd('.') + " L"
 
 @Composable
 private fun SectionTitle(text: String) {

@@ -39,6 +39,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Slider
+import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -61,6 +62,9 @@ import com.seequid.app.data.AppSettings
 import com.seequid.app.domain.HydrationCalculator
 import com.seequid.app.overlay.LiquidSkin
 import kotlinx.coroutines.launch
+import java.time.LocalTime
+import java.time.format.DateTimeFormatter
+import java.util.Locale
 import kotlin.math.roundToInt
 
 /**
@@ -71,6 +75,8 @@ import kotlin.math.roundToInt
 fun OnboardingScreen(
     settings: AppSettings,
     canDrawOverlays: Boolean,
+    /** Opened from Settings: same pages, prefilled, and it simply ends instead of starting the app. */
+    replay: Boolean = false,
     onFinished: () -> Unit,
 ) {
     val context = LocalContext.current
@@ -81,7 +87,7 @@ fun OnboardingScreen(
         ActivityResultContracts.RequestPermission()
     ) { }
 
-    BackHandler(enabled = step > 0) { step-- }
+    BackHandler(enabled = step > 0 || replay) { if (step > 0) step-- else onFinished() }
 
     Box(Modifier.fillMaxSize().safeDrawingPadding().padding(24.dp)) {
         StepDots(step, total = 4, Modifier.align(Alignment.TopCenter).padding(top = 8.dp))
@@ -111,6 +117,7 @@ fun OnboardingScreen(
                 }
                 else -> PermissionPage(
                     granted = canDrawOverlays,
+                    finishLabel = if (replay) "Done" else "Start the tide",
                     onGrant = {
                         context.startActivity(
                             Intent(
@@ -120,6 +127,10 @@ fun OnboardingScreen(
                         )
                     },
                     onStart = {
+                        if (replay) {
+                            onFinished()
+                            return@PermissionPage
+                        }
                         if (Build.VERSION.SDK_INT >= 33) {
                             notificationPermission.launch(Manifest.permission.POST_NOTIFICATIONS)
                         }
@@ -183,35 +194,57 @@ private fun GoalPage(settings: AppSettings, onNext: (goal: Int, wake: Int, sleep
     var goal by remember { mutableFloatStateOf(settings.hydration.dailyGoalMl.toFloat()) }
     var wake by remember { mutableFloatStateOf(settings.hydration.wakeMinute / 60f) }
     var sleep by remember { mutableFloatStateOf(settings.hydration.sleepMinute / 60f) }
+    val goalMl = (goal / 50).roundToInt() * 50
+    // Blue sets an amount of water; the time sliders are plain controls. Coral stays on the one action.
+    val waterSlider = SliderDefaults.colors(
+        thumbColor = Aqua, activeTrackColor = Aqua,
+        inactiveTrackColor = MaterialTheme.colorScheme.surfaceVariant,
+    )
+    val neutralSlider = SliderDefaults.colors(
+        thumbColor = MaterialTheme.colorScheme.onSurface,
+        activeTrackColor = MaterialTheme.colorScheme.onSurfaceVariant,
+        inactiveTrackColor = MaterialTheme.colorScheme.surfaceVariant,
+        activeTickColor = MaterialTheme.colorScheme.surfaceVariant,
+        inactiveTickColor = MaterialTheme.colorScheme.onSurfaceVariant,
+    )
     Column(Modifier.fillMaxSize(), verticalArrangement = Arrangement.Center) {
+        Spacer(Modifier.height(36.dp))
+        Glass(
+            goal / HydrationCalculator.MAX_GOAL_ML, LiquidSkin.WATER,
+            Modifier.size(width = 96.dp, height = 128.dp).align(Alignment.CenterHorizontally),
+        )
+        Spacer(Modifier.height(24.dp))
         Text("Your daily pace", style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
         Spacer(Modifier.height(8.dp))
         Text("The water rises when you fall behind this pace, and stays away while you sleep.",
             color = MaterialTheme.colorScheme.onSurfaceVariant)
-        Spacer(Modifier.height(28.dp))
-        Text("Daily goal: ${(goal / 50).roundToInt() * 50} ml", style = MaterialTheme.typography.titleMedium)
-        Slider(goal, { goal = it },
+        Spacer(Modifier.height(24.dp))
+        Text("Daily goal: ${liters(goalMl)}", style = MaterialTheme.typography.titleMedium)
+        Slider(goal, { goal = it }, colors = waterSlider,
             valueRange = HydrationCalculator.MIN_GOAL_ML.toFloat()..HydrationCalculator.MAX_GOAL_ML.toFloat())
         Text("Capped at 4 L — more isn't healthier. Not medical advice; ask a doctor if you have a condition.",
             style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
         Spacer(Modifier.height(20.dp))
-        Text("Awake from ${wake.roundToInt()}:00 to ${sleep.roundToInt()}:00", style = MaterialTheme.typography.titleMedium)
-        Text("Wake", style = MaterialTheme.typography.labelMedium)
-        Slider(wake, { wake = it.coerceAtMost(sleep - 4) }, valueRange = 4f..12f, steps = 7)
-        Text("Sleep", style = MaterialTheme.typography.labelMedium)
-        Slider(sleep, { sleep = it.coerceAtLeast(wake + 4) }, valueRange = 18f..24f, steps = 5)
-        Spacer(Modifier.height(28.dp))
+        Text("Awake from ${clock(wake.roundToInt())} to ${clock(sleep.roundToInt())}",
+            style = MaterialTheme.typography.titleMedium)
+        Text("Wake", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Slider(wake, { wake = it.coerceAtMost(sleep - 4) }, valueRange = 4f..12f, steps = 7, colors = neutralSlider)
+        Text("Sleep", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Slider(sleep, { sleep = it.coerceAtLeast(wake + 4) }, valueRange = 18f..24f, steps = 5, colors = neutralSlider)
+        Spacer(Modifier.height(24.dp))
         Button(
-            onClick = {
-                onNext((goal / 50).roundToInt() * 50, wake.roundToInt() * 60, sleep.roundToInt() * 60)
-            },
+            onClick = { onNext(goalMl, wake.roundToInt() * 60, sleep.roundToInt() * 60) },
             modifier = Modifier.fillMaxWidth(),
         ) { Text("Continue") }
     }
 }
 
+/** 7 -> "7:00 AM", 23 -> "11:00 PM", 24 -> "12:00 AM". */
+private fun clock(hour: Int): String =
+    LocalTime.of(hour % 24, 0).format(DateTimeFormatter.ofPattern("h:mm a", Locale.US))
+
 @Composable
-private fun PermissionPage(granted: Boolean, onGrant: () -> Unit, onStart: () -> Unit) {
+private fun PermissionPage(granted: Boolean, finishLabel: String, onGrant: () -> Unit, onStart: () -> Unit) {
     Column(
         Modifier.fillMaxSize(),
         horizontalAlignment = Alignment.CenterHorizontally,
@@ -255,7 +288,7 @@ private fun PermissionPage(granted: Boolean, onGrant: () -> Unit, onStart: () ->
                 }
             }
             Spacer(Modifier.height(16.dp))
-            Button(onClick = onStart, modifier = Modifier.fillMaxWidth()) { Text("Start the tide") }
+            Button(onClick = onStart, modifier = Modifier.fillMaxWidth()) { Text(finishLabel) }
         }
     }
 }

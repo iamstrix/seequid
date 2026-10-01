@@ -49,7 +49,7 @@ class MainActivity : ComponentActivity() {
     }
 }
 
-private enum class Screen { Home, Skins, Settings, CustomerCenter }
+private enum class Screen { Home, Skins, Settings, CustomerCenter, Intro }
 
 @Composable
 private fun SeequidRoot() {
@@ -136,8 +136,10 @@ private fun SeequidRoot() {
                     }
                 },
                 onUpgrade = { showPaywall = true },
+                onReplayIntro = { screen = Screen.Intro },
                 onBack = { screen = Screen.Home },
             )
+            Screen.Intro -> OnboardingScreen(s, canDrawOverlays, replay = true) { screen = Screen.Settings }
             Screen.CustomerCenter -> CustomerCenter(onDismiss = { screen = Screen.Settings })
         }
     }

@@ -92,7 +92,10 @@ fun Glass(fill: Float, skin: LiquidSkin, modifier: Modifier = Modifier, showSqui
         // The squid isn't clipped, so when the glass is full it peeks over the rim.
         if (showSquid) {
             val bob = amp * 0.6f * sin(phase)
-            drawSquid(Offset(size.width / 2, surface + bob), size.width * 0.42f, goalHit)
+            val squidWidth = size.width * 0.42f
+            // In shallow water the squid rests on the bottom instead of hanging out of the glass.
+            val floor = size.height - SQUID_DEPTH * squidWidth / 424f - 4.dp.toPx()
+            drawSquid(Offset(size.width / 2, minOf(surface + bob, floor)), squidWidth, goalHit)
         }
         clipPath(glass) { drawPath(wave(-phase), front.copy(alpha = 0.88f)) }
         drawRoundRect(outline, Offset.Zero, Size(size.width, size.height), corner, style = Stroke(3.dp.toPx()))
@@ -100,6 +103,8 @@ fun Glass(fill: Float, skin: LiquidSkin, modifier: Modifier = Modifier, showSqui
 }
 
 private val squidInk = Color(0xFF0A1A3A)
+/** Waterline to tentacle tips (incl. stroke), in the squid's 1024-unit space. */
+private const val SQUID_DEPTH = 212f
 private val squidMantle = PathParser().parsePathString(
     "M512,200 C610,250 668,350 668,470 L668,600 Q512,650 356,600 L356,470 C356,350 414,250 512,200 Z"
 ).toPath()
@@ -141,6 +146,10 @@ fun DrawScope.drawSquid(waterline: Offset, width: Float, happy: Boolean) {
         drawPath(squidSmile, squidInk, style = Stroke(16f, cap = StrokeCap.Round))
     }
 }
+
+/** 1750 -> "1.75 L", 1600 -> "1.6 L", 250 -> "0.25 L". */
+fun liters(ml: Int): String =
+    String.format(Locale.US, "%.2f", ml / 1000f).trimEnd('0').trimEnd('.') + " L"
 
 @Composable
 fun WeekBars(days: List<DayTotal>, goalMl: Int, modifier: Modifier = Modifier) {
