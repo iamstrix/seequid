@@ -68,6 +68,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.seequid.app.data.AppSettings
 import com.seequid.app.data.DayTotal
+import com.seequid.app.domain.History
 import com.seequid.app.domain.HydrationState
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -76,7 +77,7 @@ fun HomeScreen(
     state: HydrationState?,
     settings: AppSettings,
     isPro: Boolean,
-    week: List<DayTotal>,
+    history: List<DayTotal>,
     canDrawOverlays: Boolean,
     onLog: (Int) -> Unit,
     onUndo: () -> Unit,
@@ -150,6 +151,7 @@ fun HomeScreen(
                         mood = mood,
                         drinkTrigger = state?.loggedMl,
                         framed = false,
+                        outfit = if (isPro) settings.outfit else SquidOutfit.NONE,
                         onSquidTap = { tip = squidTip(mood, state) },
                     )
                     // A soft glow under the water so it fades into the stats instead of ending on a hard edge.
@@ -199,6 +201,17 @@ fun HomeScreen(
                 style = MaterialTheme.typography.titleMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
+            // The streak is free for everyone: it's what brings people back tomorrow.
+            val stats = remember(history, goal) { History.stats(history.map { it.totalMl }, goal) }
+            if (stats.currentStreak > 0) {
+                Text(
+                    "🔥 ${stats.currentStreak}-day streak",
+                    style = MaterialTheme.typography.titleSmall,
+                    fontWeight = FontWeight.Bold,
+                    color = Coral,
+                    modifier = Modifier.padding(top = 4.dp),
+                )
+            }
             Spacer(Modifier.height(10.dp))
             if (logged >= goal) {
                 Surface(shape = CircleShape, color = MaterialTheme.colorScheme.secondary) {
@@ -258,17 +271,32 @@ fun HomeScreen(
             Card(Modifier.fillMaxWidth()) {
                 Column(Modifier.padding(16.dp)) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        Text("Last 7 days", style = MaterialTheme.typography.titleMedium, modifier = Modifier.weight(1f))
+                        Text(if (isPro) "Last 30 days" else "Last 7 days",
+                            style = MaterialTheme.typography.titleMedium, modifier = Modifier.weight(1f))
                         if (!isPro) Icon(Icons.Default.Lock, contentDescription = "Pro feature")
                     }
                     Spacer(Modifier.height(12.dp))
+                    val stats = remember(history, goal) { History.stats(history.map { it.totalMl }, goal) }
                     if (isPro) {
-                        WeekBars(week, goal)
+                        WeekBars(history, goal)
+                        Spacer(Modifier.height(12.dp))
+                        Text(
+                            "Best streak: ${stats.bestStreak} ${if (stats.bestStreak == 1) "day" else "days"}  ·  " +
+                                "Average: ${amount(stats.averageMl)} a day",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
                     } else {
+                        val week = history.takeLast(7)
                         Box(Modifier.clickable(onClick = onUpgrade), contentAlignment = Alignment.Center) {
                             WeekBars(week.map { it.copy(totalMl = (goal * 0.4 + it.date.dayOfMonth * 97 % goal * 0.6).toInt()) },
                                 goal, Modifier.blur(10.dp))
-                            Text("See your last 7 days with Pro", fontWeight = FontWeight.Bold)
+                            Text(
+                                "See 30 days, your best streak and your average with Pro",
+                                fontWeight = FontWeight.Bold,
+                                textAlign = TextAlign.Center,
+                                modifier = Modifier.padding(horizontal = 16.dp),
+                            )
                         }
                     }
                 }
@@ -277,12 +305,6 @@ fun HomeScreen(
         }
     }
 }
-
-/**
- * An amount to ask the user to drink, rounded to 50 ml ("about 2.4 L" reads better than "about 2420 ml").
- * Never below 50 ml: whenever we ask for a drink there is something to drink, and "about 0 ml" looks broken.
- */
-private fun roundedSip(ml: Int): Int = ((ml.coerceAtLeast(0) + 25) / 50 * 50).coerceAtLeast(50)
 
 /** What the squid says when tapped: plain advice that matches its mood. */
 private fun squidTip(mood: SquidMood, state: HydrationState?): String {

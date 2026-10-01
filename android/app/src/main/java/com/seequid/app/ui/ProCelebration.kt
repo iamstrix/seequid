@@ -26,10 +26,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.rotate
-import androidx.compose.ui.graphics.drawscope.withTransform
-import androidx.compose.ui.graphics.vector.PathParser
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -53,9 +50,6 @@ fun proPlanFor(productIds: List<String>): ProPlan {
 
 private val Gold = Color(0xFFFFD166)
 private val GoldDeep = Color(0xFFF4A21B)
-private val crown = PathParser().parsePathString(
-    "M436,196 L448,126 L486,164 L512,108 L538,164 L576,126 L588,196 Z"
-).toPath()
 
 private class Particle(
     val x: Float, val delay: Float, val speed: Float, val drift: Float,
@@ -138,8 +132,10 @@ fun ProCelebration(plan: ProPlan, onDone: () -> Unit) {
                 val t = progress.value
                 val bounce = -sin((t * 6f).coerceAtMost(3.14f)) * 18.dp.toPx()
                 val waterline = Offset(size.width / 2, size.height * 0.78f + bounce)
-                drawSquid(waterline, size.width * 0.62f, SquidMood.CELEBRATING, time = t * 3f % 1f)
-                if (plan == ProPlan.LIFETIME) drawCrown(waterline, size.width * 0.62f)
+                drawSquid(
+                    waterline, size.width * 0.62f, SquidMood.CELEBRATING, time = t * 3f % 1f,
+                    outfit = if (plan == ProPlan.LIFETIME) SquidOutfit.CROWN else SquidOutfit.NONE,
+                )
             }
             Spacer(Modifier.height(16.dp))
             Text(
@@ -151,20 +147,6 @@ fun ProCelebration(plan: ProPlan, onDone: () -> Unit) {
             )
             Spacer(Modifier.height(8.dp))
             Text(subtitle, color = Color.White.copy(alpha = 0.8f), textAlign = TextAlign.Center)
-        }
-    }
-}
-
-/** A gold crown sitting on the squid's head, in the same 1024-unit space as [drawSquid]. */
-private fun DrawScope.drawCrown(waterline: Offset, width: Float) {
-    val s = width / 424f
-    withTransform({
-        translate(waterline.x - 512f * s, waterline.y - 640f * s)
-        scale(s, s, pivot = Offset.Zero)
-    }) {
-        drawPath(crown, Gold)
-        listOf(448f, 512f, 576f).forEachIndexed { i, x ->
-            drawCircle(GoldDeep, 9f, Offset(x, listOf(126f, 108f, 126f)[i]))
         }
     }
 }

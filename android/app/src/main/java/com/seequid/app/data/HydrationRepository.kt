@@ -24,9 +24,9 @@ class HydrationRepository(
     private val dao: DrinkDao,
     private val settingsStore: SettingsStore,
 ) {
-    // A week of history plus today; over-inclusive is fine, the list is tiny.
+    // A month of history plus today; over-inclusive is fine, the list is small.
     private val recentDrinks: Flow<List<Drink>> =
-        dao.observeSince(System.currentTimeMillis() - 8 * DAY_MS)
+        dao.observeSince(System.currentTimeMillis() - (HISTORY_DAYS + 1) * DAY_MS)
 
     private fun ticker(periodMs: Long): Flow<Long> = flow {
         while (true) {
@@ -46,12 +46,12 @@ class HydrationRepository(
             HydrationCalculator.state(h, now, minuteOfDay, logged)
         }.distinctUntilChanged()
 
-    /** Totals for the last seven local days, oldest first, today included. */
-    val lastSevenDays: Flow<List<DayTotal>> = recentDrinks.map { drinks ->
+    /** Totals for the last [HISTORY_DAYS] local days, oldest first, today included. */
+    val history: Flow<List<DayTotal>> = recentDrinks.map { drinks ->
         val zone = ZoneId.systemDefault()
         val today = LocalDate.now(zone)
         val byDay = drinks.groupBy { Instant.ofEpochMilli(it.timestamp).atZone(zone).toLocalDate() }
-        (6 downTo 0).map { back ->
+        (HISTORY_DAYS - 1 downTo 0).map { back ->
             val day = today.minusDays(back.toLong())
             DayTotal(day, byDay[day].orEmpty().sumOf { it.amountMl })
         }
@@ -82,7 +82,8 @@ class HydrationRepository(
         return date.atStartOfDay(zone).plusMinutes(boundary.toLong()).toInstant().toEpochMilli()
     }
 
-    private companion object {
-        const val DAY_MS = 24 * 60 * 60 * 1000L
+    companion object {
+        const val HISTORY_DAYS = 30
+        private const val DAY_MS = 24 * 60 * 60 * 1000L
     }
 }

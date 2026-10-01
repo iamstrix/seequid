@@ -13,6 +13,7 @@ import androidx.datastore.preferences.preferencesDataStore
 import com.seequid.app.domain.HydrationCalculator
 import com.seequid.app.domain.HydrationSettings
 import com.seequid.app.overlay.LiquidSkin
+import com.seequid.app.ui.SquidOutfit
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 
@@ -25,6 +26,7 @@ data class AppSettings(
     /** Level at which the tappable drop handle appears. */
     val handleThreshold: Float = 0.4f,
     val skin: LiquidSkin = LiquidSkin.WATER,
+    val outfit: SquidOutfit = SquidOutfit.NONE,
     val overlayEnabled: Boolean = false,
     val onboardingDone: Boolean = false,
     val paywallSeen: Boolean = false,
@@ -50,6 +52,7 @@ class SettingsStore(private val context: Context) {
         val opacity = floatPreferencesKey("opacity")
         val threshold = floatPreferencesKey("handle_threshold")
         val skin = stringPreferencesKey("skin")
+        val outfit = stringPreferencesKey("outfit")
         val overlay = booleanPreferencesKey("overlay_enabled")
         val onboarding = booleanPreferencesKey("onboarding_done")
         val paywallSeen = booleanPreferencesKey("paywall_seen")
@@ -72,6 +75,7 @@ class SettingsStore(private val context: Context) {
             opacity = this[Keys.opacity] ?: d.opacity,
             handleThreshold = this[Keys.threshold] ?: d.handleThreshold,
             skin = LiquidSkin.fromName(this[Keys.skin]),
+            outfit = SquidOutfit.fromName(this[Keys.outfit]),
             overlayEnabled = this[Keys.overlay] ?: false,
             onboardingDone = this[Keys.onboarding] ?: false,
             paywallSeen = this[Keys.paywallSeen] ?: false,
@@ -100,6 +104,7 @@ class SettingsStore(private val context: Context) {
 
     suspend fun setHandleThreshold(value: Float) = edit { it[Keys.threshold] = value.coerceIn(0.1f, 0.9f) }
     suspend fun setSkin(skin: LiquidSkin) = edit { it[Keys.skin] = skin.name }
+    suspend fun setOutfit(outfit: SquidOutfit) = edit { it[Keys.outfit] = outfit.name }
     suspend fun setOverlayEnabled(enabled: Boolean) = edit { it[Keys.overlay] = enabled }
     suspend fun setOnboardingDone() = edit { it[Keys.onboarding] = true }
     suspend fun setPaywallSeen() = edit { it[Keys.paywallSeen] = true }

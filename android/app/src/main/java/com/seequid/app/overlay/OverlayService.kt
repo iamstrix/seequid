@@ -1,5 +1,6 @@
 package com.seequid.app.overlay
 
+import android.animation.ValueAnimator
 import android.app.Notification
 import android.app.NotificationChannel
 import android.app.NotificationManager
@@ -19,6 +20,7 @@ import android.view.Gravity
 import android.view.View
 import android.view.WindowInsets
 import android.view.WindowManager
+import android.view.animation.DecelerateInterpolator
 import android.widget.Toast
 import androidx.core.app.NotificationCompat
 import androidx.core.app.ServiceCompat
@@ -56,6 +58,10 @@ class OverlayService : LifecycleService() {
     private var screenOn = true
     /** Seequid itself is open and shows its own water, so the overlay hides. */
     private var appOpen = false
+    /** Last height the water was shown at, so it can drain from there when it reappears. */
+    private var shownHeight = 0
+    private var heightTarget = 0
+    private var heightAnim: ValueAnimator? = null
     /** Guards the one-time water explanation until the setting round-trips. */
     private var introPosted = false
     private var last: Triple<HydrationState, AppSettings, Boolean>? = null
@@ -185,20 +191,51 @@ class OverlayService : LifecycleService() {
         val targetHeight = if (visible) (waterPx + water.crestPaddingPx).coerceAtMost(waterSpan) else 1
         val targetWidth = area.width + area.left + area.right
         val targetAlpha = safeOpacity(settings.opacity)
-        if (abs(waterParams.height - targetHeight) >= 2 || waterParams.alpha != targetAlpha ||
-            waterParams.width != targetWidth || waterParams.x != 0 || waterParams.y != 0
-        ) {
-            waterParams.height = targetHeight
+        if (waterParams.alpha != targetAlpha || waterParams.width != targetWidth || waterParams.x != 0 || waterParams.y != 0) {
             waterParams.alpha = targetAlpha
             waterParams.width = targetWidth
             waterParams.x = 0
             waterParams.y = 0
             windowManager.updateViewLayout(water, waterParams)
         }
+        if (visible) {
+            // Coming back after Seequid's own screens hid it: start from where the water was, so a
+            // drink logged in the meantime is seen draining away instead of the level just jumping.
+            val from = if (waterParams.height <= 1 && shownHeight > 0) shownHeight else waterParams.height
+            val running = heightAnim?.isRunning == true
+            when {
+                // A drink-sized change animates; the pace's slow creep (every second) just follows.
+                abs(targetHeight - from) >= dp(24) && (!running || abs(targetHeight - heightTarget) >= dp(24)) ->
+                    animateWaterHeight(from, targetHeight)
+                !running -> setWaterHeight(targetHeight)
+            }
+            shownHeight = targetHeight
+        } else {
+            heightAnim?.cancel()
+            setWaterHeight(1)
+        }
 
         // The squid shows once the water is high enough; it positions and tucks itself.
         squid.setThirsty(state.level >= 0.6f)
         squid.setVisible(visible && state.level >= settings.handleThreshold)
+    }
+
+    private fun setWaterHeight(height: Int) {
+        if (abs(waterParams.height - height) < 2) return
+        waterParams.height = height
+        windowManager.updateViewLayout(water, waterParams)
+    }
+
+    /** Drains slowly (the reward for drinking), rises a little quicker. */
+    private fun animateWaterHeight(from: Int, to: Int) {
+        heightAnim?.cancel()
+        heightTarget = to
+        heightAnim = ValueAnimator.ofInt(from, to).apply {
+            duration = if (to < from) 1400 else 600
+            interpolator = DecelerateInterpolator()
+            addUpdateListener { setWaterHeight(it.animatedValue as Int) }
+            start()
+        }
     }
 
     /** Where the squid may sit: the screen inside the status and navigation bars, in raw display px. */
@@ -288,6 +325,7 @@ class OverlayService : LifecycleService() {
 
     override fun onDestroy() {
         if (::water.isInitialized) {
+            heightAnim?.cancel()
             runCatching { unregisterReceiver(screenReceiver) }
             windowManager.removeView(water)
             squid.detach()

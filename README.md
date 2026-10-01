@@ -1,46 +1,63 @@
-# seequid
+# Seequid
 
-**Your screen is thirsty.** seequid is an Android hydration app that slowly fills your phone screen with water as you fall behind on drinking. The water rises over whatever app you're using, and drinking makes it drain away.
+**Your screen is thirsty.** Seequid is an Android hydration app that slowly covers your phone screen with water when you fall behind on drinking. The water rises over whatever app you're using. Drink, tap the squid, and watch it drain away.
 
-Most hydration apps rely on notifications, which are easy to swipe away and forget. seequid replaces them with a constant, ambient signal that you can see but that never interrupts you. The water is see-through and taps pass through it, so you can keep using your phone normally.
+Most hydration apps rely on notifications, which are easy to swipe away and forget. Seequid replaces them with a constant, ambient signal you can see but that never interrupts you. The water is see-through and your taps pass through it, so you keep using your phone normally.
 
-> Built for RevenueCat Shipaton 2026, Next Gen (student) category.
+> Built for **RevenueCat Shipaton 2026**, Next Gen (student) category.
+
+## For judges: try it in 2 minutes
+
+1. Download **`Seequid-1.0.0.apk`** from [Releases](https://github.com/iamstrix/seequid/releases) and open it on an Android 9+ phone. Allow "Install unknown apps" if Android asks.
+2. Go through the short intro. On the last page, tap **Open phone settings**, find **Seequid** and turn on **Display over other apps**. Seequid brings you back automatically.
+3. Open **Settings → For testing → Demo mode**. It squeezes a whole day into 10 minutes, so the water starts rising right away.
+4. Go to any other app and watch the water rise. When the squid appears on the edge of the screen, tap it to log a drink and watch the water drain.
+5. Tap **Go Pro**. Purchases use the **RevenueCat Test Store**, so nothing is charged: pick a plan, then choose the successful purchase option in the test dialog.
+
+The APK is a debug build on purpose: the RevenueCat SDK refuses to run a release build with a Test Store key.
 
 ## How it works
 
-- **Pace, not reminders.** You set a daily goal (capped at 4 L) and your waking hours. seequid spreads the goal evenly across your day. The water level shows how far behind that pace you are: when you're on pace the screen is dry, and when you're 500 ml behind it's full.
-- **Always on, never in the way.** The water is drawn in an overlay window that's never touchable, so taps reach the app underneath. The window is only as tall as the water, so nothing above it is redrawn.
-- **Tap the drop.** Once the water passes a threshold, a small drop button appears. Tap it to log 150–500 ml without leaving the app you're in. You can also log from the notification or from inside seequid.
-- **Quiet at night.** No water appears outside your waking hours.
+- **Pace, not reminders.** You set a daily goal (capped at 4 L). Seequid spreads it across your waking hours and compares it with what you've logged. On pace, your screen is clear. Behind, the water rises: the screen is full when you're 40% of your daily goal behind, so every drink visibly lowers it.
+- **The squid.** The mascot shows how you're doing at a glance: happy, worried, thirsty, asleep at night, or celebrating when you reach your goal. Tap it in the app for a tip ("Drink about 250 ml to clear your screen").
+- **The squid on the edge.** Over other apps, a small squid appears once the water is high. Tap it to log a drink in one tap: the sheet tells you exactly how much clears your screen and highlights the matching button. Drag it to either edge; after a few seconds it squishes into the edge with one eye peeking out, so it never covers another app's buttons.
+- **Same water everywhere.** The water in the app means the same as the water on your screen: it rises when you're behind and drains when you drink. Progress towards your goal is a separate green bar.
+- **Flexible schedule.** Sleep hours (bedtimes up to 4 AM for night owls), or no schedule at all.
 
 ## Monetization (RevenueCat)
 
-| Free | seequid Pro (`pro` entitlement) |
-|---|---|
-| The water overlay, logging, daily pace | Four premium liquids (Matcha, Cold brew, Boba tea, Night lagoon) that restyle the live overlay |
-| Water skin | 7-day drinking history |
+The core habit is free forever on purpose: a health app shouldn't put health behind a paywall. Pro is about personality and insight.
 
-- **Paywall:** a remote RevenueCat Paywall (`purchases-ui` `PaywallDialog`). It's shown once, right after the user has seen the water working on their own phone, and again whenever they tap a locked liquid, the history card or "Go Pro".
+| Free | Seequid Pro (`seequid_pro` entitlement) |
+|---|---|
+| The water overlay, logging, squid moods, sleep schedule | 4 extra drinks (Matcha, Cold brew, Boba tea, Night lagoon) that restyle the live overlay |
+| Daily streak counter | Squid outfits: crown, sunglasses, party hat, headband |
+| 7-day history preview | 30-day history, best streak and average per day |
+
+**Pricing:** $1.99 / month, $11.99 / year (50% off, preselected) or $24.99 once.
+
+- **Paywall:** a remote paywall designed in the RevenueCat dashboard, attached to the `default` offering (`pro_monthly`, `pro_yearly`, `pro_lifetime`), rendered full screen with `purchases-ui`. It appears once after onboarding, and whenever the user taps Go Pro, a locked drink, outfit or the history card. Prices and the discount badge come from the offering, so they can change without an app update.
+- **Purchase celebration:** a `PaywallListener` reads which product was bought and plays a matching celebration: bubbles for monthly, confetti for yearly, a crowned squid in gold for lifetime.
 - **Entitlement-driven UI:** one `StateFlow<Boolean>` fed by `UpdatedCustomerInfoListener`. Buying Pro restyles the overlay that's already running, without a restart.
-- **Customer Center** for managing the subscription, plus **Restore purchases**.
-- **Products:** monthly, annual and lifetime in the `default` offering. These are RevenueCat Test Store products; see setup below.
+- **Customer Center** ("Manage or cancel" in Settings) and **Restore purchases**. With Test Store purchases, RevenueCat hides the Cancel option by design because there's no store subscription to cancel; on Google Play it appears automatically.
 
 ## Technical choices
 
 | Choice | Why |
 |---|---|
-| `SYSTEM_ALERT_WINDOW` overlay in a foreground service | Works on every Android 9+ phone with one permission. An AccessibilityService would allow opaque water, but it makes many banking apps refuse to run, is blocked for sideloaded apps on Android 13+ ("restricted settings"), and is revoked under Android 16+ Advanced Protection. |
-| Water drawn with **window** alpha ≤ 0.75, never above the device's `maximumObscuringOpacityForTouch` | Since Android 12, touches passing through an untrusted overlay are dropped if the window's alpha is above 0.8. The skin colours are opaque, and all the translucency comes from the window. |
-| Level computed from clock + drink log, never stored | Correct after process death, reboots and timezone changes. The logic is a pure function (`HydrationCalculator`) with unit tests. |
+| `SYSTEM_ALERT_WINDOW` overlay in a foreground service | Works on every Android 9+ phone with one permission. An AccessibilityService could draw opaque water, but it makes many banking apps refuse to run and is blocked for sideloaded apps on Android 13+. |
+| Water drawn with **window** alpha ≤ 0.75, below the device's `maximumObscuringOpacityForTouch` | Since Android 12, touches through an untrusted overlay are dropped above 0.8 window alpha. All the translucency comes from the window, never the colours. |
+| Level computed from the clock and the drink log, never stored | Correct after process death, reboots and timezone changes. The pacing is a pure, unit-tested function, including night owls whose day ends after midnight. |
+| The overlay steps aside for Seequid's own screens | No double water inside the app, and the quick-log sheet isn't tinted. When it comes back, the water drains from its old level to the new one. |
 | Kotlin, Jetpack Compose, Room, DataStore, manual DI | A small app with fast iteration. |
 
-**Privacy:** seequid never reads screen content. All data stays on the device. The only network traffic is RevenueCat's purchase and entitlement calls.
+**Privacy:** Seequid never reads screen content. All data stays on the device. The only network traffic is RevenueCat's purchase and entitlement calls.
 
-**Health:** goals are capped at 4 L/day, there's no water during sleeping hours, and the app says clearly that it isn't medical advice.
+**Health:** goals are capped at 4 L a day, there's no water during sleep hours by default, and the app says clearly that it isn't medical advice.
 
-## Build and run
+## Build from source
 
-Requirements: Android Studio (JDK 17+), Android SDK 36.
+Requirements: Android Studio (JDK 17 to 21; Gradle 8.14 doesn't run on JDK 25), Android SDK 36.
 
 ```bash
 cd android
@@ -48,24 +65,22 @@ cp local.properties.example local.properties   # set sdk.dir and revenuecat.apiK
 ./gradlew :app:installDebug
 ```
 
+Without a RevenueCat key the app runs in free mode and shows a short "purchases not configured" message instead of the paywall.
+
 ### RevenueCat setup (Test Store, no Play Console needed)
 
-1. Create a RevenueCat project. Test Store is provisioned automatically. Copy the **Test Store API key** (`test_…`) into `local.properties` as `revenuecat.apiKey`.
-2. Create the entitlement `pro`.
-3. Create Test Store products (for example `seequid_monthly`, `seequid_annual`, `seequid_lifetime`), attach each one to `pro`, and add them to the `default` offering as Monthly, Annual and Lifetime packages.
-4. Design a Paywall for the `default` offering in the dashboard.
-
-Test Store keys only work in **debug** builds; the SDK deliberately crashes a release build that uses one. Without a key, the app runs in free mode and explains that purchases aren't configured.
-
-### Trying the water quickly
-
-On the home screen, turn on **Demo mode**. It squeezes a whole day's pace into 10 minutes, so the water starts rising immediately.
+1. Create a RevenueCat project and copy the **Test Store API key** (`test_…`) into `local.properties` as `revenuecat.apiKey`.
+2. Create the entitlement `seequid_pro`.
+3. Create Test Store products `pro_monthly`, `pro_yearly` and `pro_lifetime`, attach them to `seequid_pro`, and add them to the `default` offering as Monthly, Annual and Lifetime packages.
+4. Design a paywall for the `default` offering and publish it.
+5. Optionally enable Customer Center.
 
 ## Roadmap
 
-- Immersive mode via an optional AccessibilityService (opaque water, no persistent notification), offered only with clear disclosure of the trade-offs above
-- Smart pacing (workouts, hot days), home-screen widget, per-app quiet list
-- Paywall A/B experiments and targeted offerings once there's real traffic
+- The quick-log sheet floating above the water, so you see it drain while you log
+- Outfits on the edge squid, more drinks, smart goals for workouts and hot days
+- Night-shift schedules, per-app pause, home screen widget
+- Paywall experiments once there's real traffic
 
 ## License
 

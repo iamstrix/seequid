@@ -1,6 +1,8 @@
 package com.seequid.app.ui
 
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.Canvas
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.grid.GridItemSpan
@@ -45,13 +47,15 @@ fun SkinsScreen(
     selected: LiquidSkin,
     isPro: Boolean,
     onSelect: (LiquidSkin) -> Unit,
+    outfit: SquidOutfit,
+    onSelectOutfit: (SquidOutfit) -> Unit,
     onLocked: () -> Unit,
     onBack: () -> Unit,
 ) {
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Liquids") },
+                title = { Text("Drinks and outfits") },
                 navigationIcon = {
                     IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back") }
                 },
@@ -73,7 +77,7 @@ fun SkinsScreen(
                     ) {
                         Row(Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
                             Column(Modifier.weight(1f)) {
-                                Text("Unlock 4 more drinks", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                                Text("Unlock 4 drinks and squid outfits", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
                                 Text("Change the water on your screen to matcha, cold brew, boba tea or night lagoon.",
                                     style = MaterialTheme.typography.bodySmall,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant)
@@ -107,6 +111,56 @@ fun SkinsScreen(
                             verticalAlignment = Alignment.CenterVertically,
                         ) {
                             if (skin.isPro) {
+                                Surface(shape = CircleShape, color = MaterialTheme.colorScheme.primary) {
+                                    Text("PRO", Modifier.padding(horizontal = 8.dp, vertical = 2.dp),
+                                        style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold,
+                                        color = MaterialTheme.colorScheme.onPrimary)
+                                }
+                            }
+                            if (locked) {
+                                Spacer(Modifier.width(4.dp))
+                                Icon(Icons.Default.Lock, "Locked", Modifier.size(18.dp))
+                            }
+                            if (isSelected) {
+                                Spacer(Modifier.width(4.dp))
+                                Icon(Icons.Default.CheckCircle, "Selected", Modifier.size(20.dp),
+                                    tint = MaterialTheme.colorScheme.primary)
+                            }
+                        }
+                    }
+                }
+            }
+            item(span = { GridItemSpan(maxLineSpan) }) {
+                Text(
+                    "Squid outfits",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                    modifier = Modifier.padding(top = 12.dp),
+                )
+            }
+            items(SquidOutfit.entries) { item ->
+                val locked = item.isPro && !isPro
+                val isSelected = item == outfit && !locked
+                Card(
+                    onClick = { if (locked) onLocked() else onSelectOutfit(item) },
+                    border = if (isSelected) BorderStroke(3.dp, MaterialTheme.colorScheme.primary) else null,
+                ) {
+                    Box {
+                        Column(
+                            Modifier.fillMaxWidth().padding(12.dp),
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                        ) {
+                            // Room above for hats and below for tentacles.
+                            Canvas(Modifier.padding(top = 8.dp).size(120.dp).alpha(if (locked) 0.5f else 1f)) {
+                                drawSquid(
+                                    Offset(size.width / 2, size.height * 0.7f), size.width * 0.5f,
+                                    SquidMood.HAPPY, outfit = item,
+                                )
+                            }
+                            Text(item.displayName, style = MaterialTheme.typography.titleSmall)
+                        }
+                        Row(Modifier.align(Alignment.TopEnd).padding(8.dp), verticalAlignment = Alignment.CenterVertically) {
+                            if (item.isPro) {
                                 Surface(shape = CircleShape, color = MaterialTheme.colorScheme.primary) {
                                     Text("PRO", Modifier.padding(horizontal = 8.dp, vertical = 2.dp),
                                         style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold,

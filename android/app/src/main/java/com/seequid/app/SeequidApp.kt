@@ -18,8 +18,15 @@ class AppContainer(context: Context) {
     val settings = SettingsStore(context)
     val hydration = HydrationRepository(SeequidDatabase.create(context).drinks(), settings)
     val billing = BillingRepository(context)
-    /** True while the main app is on screen: it shows its own water, so the overlay steps aside. */
+    /** True while one of Seequid's own screens is visible: the overlay steps aside for them. */
     val appInForeground = MutableStateFlow(false)
+    private var visibleScreens = 0
+
+    /** Called from each activity's onStart/onStop; the main app and the quick-log sheet can overlap. */
+    fun screenVisible(visible: Boolean) {
+        visibleScreens = (visibleScreens + if (visible) 1 else -1).coerceAtLeast(0)
+        appInForeground.value = visibleScreens > 0
+    }
 }
 
 class SeequidApp : Application() {

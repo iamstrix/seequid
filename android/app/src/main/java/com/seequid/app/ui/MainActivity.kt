@@ -57,11 +57,11 @@ class MainActivity : ComponentActivity() {
     // Visible, not just resumed: the paywall and system dialogs shouldn't bring the overlay back.
     override fun onStart() {
         super.onStart()
-        container.appInForeground.value = true
+        container.screenVisible(true)
     }
 
     override fun onStop() {
-        container.appInForeground.value = false
+        container.screenVisible(false)
         super.onStop()
     }
 }
@@ -76,7 +76,7 @@ private fun SeequidRoot() {
 
     val settings by c.settings.settings.collectAsStateWithLifecycle(initialValue = null)
     val state by c.hydration.state.collectAsStateWithLifecycle(initialValue = null)
-    val week by c.hydration.lastSevenDays.collectAsStateWithLifecycle(initialValue = emptyList())
+    val history by c.hydration.history.collectAsStateWithLifecycle(initialValue = emptyList())
     val isPro by c.billing.isPro.collectAsStateWithLifecycle()
 
     var canDrawOverlays by remember { mutableStateOf(Settings.canDrawOverlays(context)) }
@@ -114,7 +114,7 @@ private fun SeequidRoot() {
                 state = state,
                 settings = s,
                 isPro = isPro,
-                week = week,
+                history = history,
                 canDrawOverlays = canDrawOverlays,
                 onLog = { ml -> scope.launch { c.hydration.log(ml) } },
                 onUndo = {
@@ -135,6 +135,8 @@ private fun SeequidRoot() {
                 selected = s.skin,
                 isPro = isPro,
                 onSelect = { skin -> scope.launch { c.settings.setSkin(skin) } },
+                outfit = s.outfit,
+                onSelectOutfit = { o -> scope.launch { c.settings.setOutfit(o) } },
                 onLocked = { showPaywall = true },
                 onBack = { screen = Screen.Home },
             )

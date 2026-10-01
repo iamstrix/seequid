@@ -1,33 +1,57 @@
-So the water currently rising has to have a value, right? We have the stat in the home screen "Drink 50ml to clear". What if it's portrayed as "Water to drink: 50ml", displayed in the mini-overlay?
+# Seequid - Demo Video Script (Casual & Conversational)
+# Runtime: ~1 minute 40 seconds (spoken naturally)
 
-Yes! That connects the entire experience together.
+---
 
-Think about the user journey:
+### [0:00 - 0:20] THE HOOK (Camera: Physical Phone in Hand)
+"Look, we all have that friend—or honestly, maybe it’s you—where it's 4 PM, you've survived entirely on iced coffee and sheer anxiety, and you suddenly realize: 'shit, I haven't had a single drop of water today.'
 
-The water rises on their screen while they scroll Twitter.
-They tap the squid handle to open the quick-log sheet.
-They see the buttons: [150]  [250]  [330]  [500].
-If the sheet tells them how much they need to clear the screen, their eye immediately knows which button to tap!
+Every hydration app tries to fix this with push notifications. But what do we actually do? We swipe them away in half a second and forget about them. 
 
-Phrasing: Actionable vs. Label
-Instead of the robotic label "Water to drink: 250ml", use natural, active language:
+So I thought: what if your phone just physically drowned the longer you ignored it? 
 
-"Drink ~250 ml to clear your screen" (or: "Drink ~250 ml to clear the water • 1.5 L of 2.5 L today")
+That’s why we built Seequid. The name is literally 'See-Liquid'—because you actually see liquid flooding your screen."
 
-Why this is brilliant UX:
-Instant Guidance: If the sheet says "Drink ~250 ml to clear your screen", the user doesn't even have to think—they tap the [ 250 ] button, the water drains away, and they're back to what they were doing in 1 second.
-Pairs with the Phantom-Debt Fix: When you cap the deficit at 500 ml, the number to clear the screen will always be between 50 ml and 500 ml, which matches your four quick-log buttons (150, 250, 330, 500) perfectly!
-Tell Claude to update that subtitle in 
+---
 
-QuickLogActivity.kt
-:
+### [0:20 - 0:45] THE OVERLAY & TOUCH PROOF (Screen: scrcpy Recording)
+"Here’s how it works. As you fall behind on your daily water pace, water slowly creeps up from the bottom of your screen over whatever app you're using. 
 
-kotlin
-val deficit = (it.expectedMl - it.loggedMl).coerceIn(0, 500)
-val toClear = if (deficit <= 50) "a sip" else "about ${amount(deficit)}"
-Text(
-    "Drink $toClear to clear your screen • ${amount(it.loggedMl)} of ${amount(it.goalMl)} today",
-    color = MaterialTheme.colorScheme.secondary,
-    fontWeight = FontWeight.Bold,
-)
-It turns the quick-log sheet into an intelligent, one-tap solution.
+Now, the obvious question: 'Wait, doesn’t that block my taps?' 
+
+Nope. We built this with Android's system overlay APIs, capped the window opacity at 75%, and made it strictly non-touchable. You can still scroll Twitter, type on your keyboard, and send texts right through the water. It’s an ambient signal that stays on your screen without getting in your way.
+
+When the tide gets high, our little squid buddy docks right on the edge. You tap him, pick how much you just drank—like a quick 250 ml glass—and boom, the water immediately drains away."
+
+---
+
+### [0:45 - 1:05] INSIDE THE APP & THE ENGINE (Screen: App Dashboard)
+"Inside the app, everything is built natively with Kotlin and Jetpack Compose. 
+
+We don't do dumb arbitrary timers. Hydration pacing is calculated as a pure mathematical function based on your waking hours and the clock. So even if your phone dies or you restart it, your water level stays 100% accurate with zero phantom backlog.
+
+And if you want to test it out, we have Demo Mode right here on the home screen, which squeezes an entire day's pace into 10 minutes so you can watch the wave physics do their thing."
+
+---
+
+### [1:05 - 1:35] REVENUECAT PAYWALL & PRO SKINS (Screen: RevenueCat Flow)
+"For monetization, everything is powered by RevenueCat. 
+
+The core water overlay, logging, and daily pace are 100% free. But if you want to customize your vibe or see your 7-day drinking history, you go Pro.
+
+Tapping 'Go Pro' pops up RevenueCat’s remote PaywallDialog, hooked into their Test Store offering monthly, annual, and lifetime packages. 
+
+Watch what happens when I tap purchase. 
+
+[Tap Buy on Test Store]
+
+RevenueCat’s listener picks up the entitlement instantly via StateFlow. No app restart needed. It immediately unlocks my 7-day history card, and lets me restyle the live running overlay into premium drinks—like Matcha, Cold Brew, or Boba Tea with actual floating pearls. Even when I leave the app, my screen is now running Matcha."
+
+---
+
+### [1:35 - 1:45] OUTRO (Camera: Physical Phone / Hero Shot)
+"No more annoying notifications you swipe away. Just a chill, ambient reminder that keeps you hydrated while you use your phone.
+
+Built by a student dev using Kotlin, Jetpack Compose, and RevenueCat for Shipaton 2026. 
+
+Thanks for checking out Seequid!"

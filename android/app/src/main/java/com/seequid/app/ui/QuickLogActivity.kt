@@ -60,23 +60,43 @@ class QuickLogActivity : ComponentActivity() {
                             Text("How much did you drink?", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
                             // Today's progress, right where the decision is made.
                             val state by container.hydration.state.collectAsStateWithLifecycle(initialValue = null)
+                            // The real amount that clears the screen (never capped, so it never over-promises),
+                            // plus today's progress.
+                            val toClear = state?.takeIf { it.level > 0.005f }?.let { roundedSip(it.expectedMl - it.loggedMl) }
                             state?.let {
                                 Text(
-                                    "${amount(it.loggedMl)} of ${amount(it.goalMl)} today",
+                                    if (toClear != null) "Drink about ${amount(toClear)} to clear your screen"
+                                    else "Your screen is clear",
                                     color = MaterialTheme.colorScheme.secondary,
                                     fontWeight = FontWeight.Bold,
+                                )
+                                Text(
+                                    "${amount(it.loggedMl)} of ${amount(it.goalMl)} today",
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 )
                             }
                             Text("Log it and the water on your screen will go down.", color = MaterialTheme.colorScheme.onSurfaceVariant)
                             Spacer(Modifier.height(16.dp))
                             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                                listOf(150, 250, 330, 500).forEach { ml ->
-                                    JellyButton(
-                                        onClick = { log(ml) },
-                                        modifier = Modifier.weight(1f),
-                                        haptic = true,
-                                        contentPadding = PaddingValues(horizontal = 4.dp),
-                                    ) { Text("$ml") }
+                                val sizes = listOf(150, 250, 330, 500)
+                                // The smallest drink that clears the screen (or the biggest, if none does) is the suggestion.
+                                val suggested = toClear?.let { need -> sizes.firstOrNull { it >= need } ?: sizes.last() }
+                                sizes.forEach { ml ->
+                                    Column(Modifier.weight(1f), horizontalAlignment = Alignment.CenterHorizontally) {
+                                        JellyButton(
+                                            onClick = { log(ml) },
+                                            modifier = Modifier.fillMaxWidth(),
+                                            glow = ml == suggested,
+                                            haptic = true,
+                                            contentPadding = PaddingValues(horizontal = 4.dp),
+                                        ) { Text("$ml") }
+                                        Text(
+                                            if (ml == suggested) (if (ml >= toClear!!) "Clears it" else "Best start") else "",
+                                            style = MaterialTheme.typography.labelSmall,
+                                            color = MaterialTheme.colorScheme.secondary,
+                                            modifier = Modifier.padding(top = 6.dp),
+                                        )
+                                    }
                                 }
                             }
                             Spacer(Modifier.height(4.dp))
@@ -86,6 +106,17 @@ class QuickLogActivity : ComponentActivity() {
                 }
             }
         }
+    }
+
+    // Hide the overlay while the sheet is up, so the water doesn't tint it.
+    override fun onStart() {
+        super.onStart()
+        container.screenVisible(true)
+    }
+
+    override fun onStop() {
+        container.screenVisible(false)
+        super.onStop()
     }
 
     private fun log(ml: Int) {

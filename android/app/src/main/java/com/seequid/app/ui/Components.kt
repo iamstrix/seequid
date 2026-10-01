@@ -77,6 +77,7 @@ fun Glass(
      */
     drinkTrigger: Int? = null,
     framed: Boolean = true,
+    outfit: SquidOutfit = SquidOutfit.NONE,
     onSquidTap: (() -> Unit)? = null,
 ) {
     // Real glasses aren't filled to the brim: 100% sits at 85% height, over-goal tops out a little higher.
@@ -163,7 +164,7 @@ fun Glass(
             val x = if (framed) size.width / 2 else size.width / 2 + sin(phase / 2) * size.width * 0.25f
             val w = wiggle.value
             val tilt = if (w < 1f) sin(w * 4 * PI.toFloat()) * 14f * (1f - w) else 0f
-            drawSquid(Offset(x, y), squidWidth, mood, tilt, time)
+            drawSquid(Offset(x, y), squidWidth, mood, tilt, time, outfit)
             if (p < 1f) {
                 // Splash: a ring spreading on the surface and a few bubbles bursting upward.
                 val ring = squidWidth * (0.5f + 1.2f * p)
@@ -226,6 +227,12 @@ fun AmbientGlow(modifier: Modifier = Modifier, content: @Composable () -> Unit) 
     }
 }
 
+/**
+ * An amount to ask the user to drink, rounded to 50 ml ("about 2.4 L" reads better than "about 2420 ml").
+ * Never below 50 ml: whenever we ask for a drink there is something to drink, and "about 0 ml" looks broken.
+ */
+fun roundedSip(ml: Int): Int = ((ml.coerceAtLeast(0) + 25) / 50 * 50).coerceAtLeast(50)
+
 /** One rule for amounts everywhere: under 1 L in ml ("200 ml"), from 1 L in liters ("1.25 L"). */
 fun amount(ml: Int): String = if (ml < 1000) "$ml ml" else liters(ml)
 
@@ -258,7 +265,7 @@ fun WeekBars(days: List<DayTotal>, goalMl: Int, modifier: Modifier = Modifier) {
     Column(modifier) {
         Row(
             Modifier.fillMaxWidth().height(120.dp),
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            horizontalArrangement = Arrangement.spacedBy(if (days.size > 7) 3.dp else 8.dp),
             verticalAlignment = Alignment.Bottom,
         ) {
             days.forEach { day ->
@@ -273,6 +280,8 @@ fun WeekBars(days: List<DayTotal>, goalMl: Int, modifier: Modifier = Modifier) {
                 }
             }
         }
+        // Day letters only fit a week; a month is read by its shape.
+        if (days.size > 7) return@Column
         Spacer(Modifier.height(6.dp))
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             days.forEach { day ->

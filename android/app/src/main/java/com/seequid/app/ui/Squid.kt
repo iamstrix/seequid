@@ -6,12 +6,24 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.drawscope.clipPath
 import androidx.compose.ui.graphics.drawscope.rotate
 import androidx.compose.ui.graphics.drawscope.withTransform
 import androidx.compose.ui.graphics.vector.PathParser
 import com.seequid.app.domain.HydrationState
 import kotlin.math.PI
 import kotlin.math.sin
+
+/** Something for the squid to wear. Everything except [NONE] is Pro. */
+enum class SquidOutfit(val displayName: String) {
+    NONE("No outfit"), CROWN("Crown"), SUNGLASSES("Sunglasses"), PARTY_HAT("Party hat"), HEADBAND("Headband");
+
+    val isPro: Boolean get() = this != NONE
+
+    companion object {
+        fun fromName(name: String?): SquidOutfit = entries.firstOrNull { it.name == name } ?: NONE
+    }
+}
 
 /** How the squid feels, so the user can read their status at a glance. */
 enum class SquidMood { HAPPY, WORRIED, THIRSTY, SLEEPING, CELEBRATING }
@@ -64,7 +76,14 @@ private val zee = path("M0,0 L26,0 L0,28 L26,28")
  * [waterline] is where the water surface crosses it (just under the mouth), [width] is the mantle-and-fins width,
  * [tilt] rotates it around the waterline (for the tap wiggle) and [time] (0..1, looping) animates extras.
  */
-fun DrawScope.drawSquid(waterline: Offset, width: Float, mood: SquidMood, tilt: Float = 0f, time: Float = 0f) {
+fun DrawScope.drawSquid(
+    waterline: Offset,
+    width: Float,
+    mood: SquidMood,
+    tilt: Float = 0f,
+    time: Float = 0f,
+    outfit: SquidOutfit = SquidOutfit.NONE,
+) {
     val s = width / 424f
     rotate(tilt, pivot = waterline) {
         withTransform({
@@ -78,6 +97,7 @@ fun DrawScope.drawSquid(waterline: Offset, width: Float, mood: SquidMood, tilt: 
             drawOval(Coral.copy(alpha = 0.7f), Offset(390f, 518f), Size(48f, 24f))
             drawOval(Coral.copy(alpha = 0.7f), Offset(586f, 518f), Size(48f, 24f))
             drawMouth(mood)
+            drawOutfit(outfit)
             drawExtras(mood, time)
         }
     }
@@ -129,6 +149,42 @@ private fun DrawScope.drawExtras(mood: SquidMood, time: Float) {
             sparkle(at, 34f * twinkle)
         }
         SquidMood.HAPPY, SquidMood.WORRIED, SquidMood.THIRSTY -> Unit
+    }
+}
+
+private val gold = Color(0xFFFFD166)
+private val goldDeep = Color(0xFFF4A21B)
+private val crownPath = path("M436,196 L448,126 L486,164 L512,108 L538,164 L576,126 L588,196 Z")
+private val partyHat = path("M512,70 L566,212 L458,212 Z")
+private val hatStripes = path("M492,122 L532,122 M478,160 L546,160 M466,196 L558,196")
+private val shadesBridge = path("M506,476 Q512,468 518,476")
+
+private fun DrawScope.drawOutfit(outfit: SquidOutfit) {
+    when (outfit) {
+        SquidOutfit.NONE -> Unit
+        SquidOutfit.CROWN -> {
+            drawPath(crownPath, gold)
+            listOf(448f to 126f, 512f to 108f, 576f to 126f).forEach { (x, y) -> drawCircle(goldDeep, 9f, Offset(x, y)) }
+        }
+        SquidOutfit.SUNGLASSES -> {
+            listOf(418f, 518f).forEach { x ->
+                drawRoundRect(ink, Offset(x, 452f), Size(88f, 56f), androidx.compose.ui.geometry.CornerRadius(22f))
+                drawLine(Color.White.copy(alpha = 0.5f), Offset(x + 14f, 466f), Offset(x + 34f, 466f), 7f, StrokeCap.Round)
+            }
+            drawPath(shadesBridge, ink, style = Stroke(10f, cap = StrokeCap.Round))
+        }
+        SquidOutfit.PARTY_HAT -> {
+            drawPath(partyHat, Coral)
+            drawPath(hatStripes, Color.White.copy(alpha = 0.85f), style = Stroke(9f, cap = StrokeCap.Round))
+            drawCircle(gold, 20f, Offset(512f, 70f))
+        }
+        SquidOutfit.HEADBAND -> {
+            // A sweatband across the forehead, clipped to the head's outline.
+            clipPath(mantle) {
+                drawRect(Coral, Offset(340f, 336f), Size(344f, 46f))
+                drawRect(Color.White.copy(alpha = 0.6f), Offset(340f, 352f), Size(344f, 8f))
+            }
+        }
     }
 }
 
