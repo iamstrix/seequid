@@ -1,6 +1,22 @@
 package com.seequid.app.ui
 
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.filled.AutoAwesome
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Surface
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.scale
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
+import com.seequid.app.R
+import java.util.Locale
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -24,11 +40,11 @@ import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.ListItem
+import androidx.compose.material3.ListItemDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -59,9 +75,29 @@ fun HomeScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("seequid", fontWeight = FontWeight.Bold) },
+                title = {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        // The mipmap is the 108dp adaptive canvas; zoom to its 72dp visible area.
+                        Image(
+                            painterResource(R.mipmap.ic_launcher_foreground), contentDescription = null,
+                            Modifier.size(32.dp).clip(RoundedCornerShape(10.dp)).graphicsLayer(scaleX = 1.5f, scaleY = 1.5f),
+                        )
+                        Spacer(Modifier.width(10.dp))
+                        Text(stringResource(R.string.app_name), fontWeight = FontWeight.Bold)
+                    }
+                },
                 actions = {
-                    if (!isPro) TextButton(onClick = onUpgrade) { Text("Go Pro") }
+                    if (!isPro) {
+                        Button(
+                            onClick = onUpgrade,
+                            contentPadding = PaddingValues(horizontal = 14.dp),
+                            modifier = Modifier.height(34.dp),
+                        ) {
+                            Icon(Icons.Default.AutoAwesome, contentDescription = null, Modifier.size(16.dp))
+                            Spacer(Modifier.width(6.dp))
+                            Text("Go Pro", style = MaterialTheme.typography.labelLarge)
+                        }
+                    }
                     IconButton(onClick = onOpenSkins) { Icon(Icons.Default.Palette, "Skins") }
                     IconButton(onClick = onOpenSettings) { Icon(Icons.Default.Settings, "Settings") }
                 },
@@ -76,10 +112,32 @@ fun HomeScreen(
             val goal = state?.goalMl ?: settings.hydration.dailyGoalMl
             val skin = if (settings.skin.isPro && !isPro) com.seequid.app.overlay.LiquidSkin.WATER else settings.skin
 
-            Spacer(Modifier.height(8.dp))
-            Glass(logged.toFloat() / goal, skin, Modifier.size(width = 150.dp, height = 210.dp))
+            // Headroom for the squid, which pokes out of the glass as it fills.
+            Spacer(Modifier.height(44.dp))
+            Glass(logged.toFloat() / goal, skin, Modifier.size(width = 180.dp, height = 240.dp))
             Spacer(Modifier.height(16.dp))
-            Text("$logged / $goal ml", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
+            Text(
+                liters(logged),
+                style = MaterialTheme.typography.displayMedium,
+                fontWeight = FontWeight.Bold,
+            )
+            Text(
+                "of ${liters(goal)} · ${logged * 100 / goal.coerceAtLeast(1)}%",
+                style = MaterialTheme.typography.titleMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            Spacer(Modifier.height(10.dp))
+            if (logged >= goal) {
+                Surface(shape = CircleShape, color = MaterialTheme.colorScheme.secondary) {
+                    Text(
+                        "Goal hit 🎉",
+                        Modifier.padding(horizontal = 14.dp, vertical = 6.dp),
+                        color = MaterialTheme.colorScheme.background,
+                        fontWeight = FontWeight.Bold,
+                    )
+                }
+                Spacer(Modifier.height(8.dp))
+            }
             Text(tideLine(state), color = MaterialTheme.colorScheme.onSurfaceVariant)
 
             Spacer(Modifier.height(20.dp))
@@ -100,12 +158,23 @@ fun HomeScreen(
                         else "Needs “Display over other apps” permission")
                     },
                     trailingContent = { Switch(settings.overlayEnabled, onOverlayToggle) },
+                    colors = ListItemDefaults.colors(containerColor = Color.Transparent),
                 )
-                ListItem(
-                    headlineContent = { Text("Demo mode") },
-                    supportingContent = { Text("A whole day's pace in 10 minutes") },
-                    trailingContent = { Switch(settings.hydration.demoMode, onDemoToggle) },
-                )
+                HorizontalDivider(Modifier.padding(horizontal = 16.dp), color = MaterialTheme.colorScheme.surfaceVariant)
+                Row(
+                    Modifier.fillMaxWidth().padding(start = 16.dp, end = 8.dp, top = 4.dp, bottom = 4.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Column(Modifier.weight(1f)) {
+                        Text("Demo mode", style = MaterialTheme.typography.labelLarge)
+                        Text(
+                            "A whole day's pace in 10 minutes",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                    Switch(settings.hydration.demoMode, onDemoToggle, Modifier.scale(0.8f))
+                }
             }
 
             Spacer(Modifier.height(16.dp))
@@ -131,6 +200,10 @@ fun HomeScreen(
         }
     }
 }
+
+/** 1750 -> "1.75 L", 1600 -> "1.6 L", 250 -> "0.25 L". */
+private fun liters(ml: Int): String =
+    String.format(Locale.US, "%.2f", ml / 1000f).trimEnd('0').trimEnd('.') + " L"
 
 private fun tideLine(state: HydrationState?): String = when {
     state == null -> ""

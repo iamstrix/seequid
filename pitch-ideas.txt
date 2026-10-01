@@ -1,0 +1,28 @@
+# Seequid - Pitch Ideas & Problem Statement Hooks
+
+## Core Problem
+Hydration reminders fail because push notifications are designed to be swiped away in 0.2 seconds and forgotten. People go through their entire day locked into screens, only realizing late at night that they haven't had a single drop of water.
+
+## Hook Options
+
+### Option 1: The 1-2 Punch (Humorous & Relatable - Recommended)
+"It’s 4 PM. Your girlfriend has had half a sip of water, an iced matcha, and a headache. Or maybe that’s you—locked into your screen, suddenly realizing: 'shit, I haven't had a single drop of water today.'
+
+Hydration reminders don’t work because notifications are designed to be swiped away and forgotten. So we built seequid: your screen is literally thirsty."
+
+### Option 2: The Direct Tech Worker / Student Hook
+"How many times have you hit 7 PM with a pounding headache, looked at your desk, and realized: 'shit, I haven't drank anything today'?
+
+We all know the notification drill: ding, swipe away, ignored. seequid replaces notifications with an ambient signal: water slowly floods your screen the further behind pace you fall, rising over whatever app you're using until you log a drink."
+
+### Option 3: Punchy 10-Second Reel / Short Hook
+"This app is for everyone whose daily water intake consists of one sip and a dream.
+
+Instead of another push notification you’ll instantly dismiss, seequid slowly submerges your phone in water as you fall behind on your hydration goal. And taps pass right through it."
+
+---
+
+## Brand Meaning
+- **Seequid** = **See-Liquid** (literally seeing liquid rise over your phone screen)
+- Marine / playful undertone (squid / water creature vibes)
+- Memorable 3-second line in the pitch: "That's why we call it seequid: you literally see liquid rising on your phone."

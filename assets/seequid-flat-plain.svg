@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024">
+  <defs><clipPath id="w"><path d="M-256,700 C-171,650 -85,650 0,700 C85,750 171,750 256,700 C341,650 427,650 512,700 C597,750 683,750 768,700 C853,650 939,650 1024,700 C1109,750 1195,750 1280,700 L1280,1280 L-256,1280 Z"/></clipPath></defs>
+  <rect x="0" y="0" width="1024" height="1024" fill="#2E86F5"/>
+  <g fill="#FFFFFF" stroke="#FFFFFF" transform="translate(512 520) scale(1.15) translate(-512 -520)">
+  <path d="M512,200 C610,250 668,350 668,470 L668,600 Q512,650 356,600 L356,470 C356,350 414,250 512,200 Z"/>
+  <path d="M410,330 Q320,310 300,370 Q350,405 400,400 Z"/><path d="M614,330 Q704,310 724,370 Q674,405 624,400 Z"/>
+  <g fill="none" stroke-width="40" stroke-linecap="round"><path d="M405,600 C405,680 397,728 362,754 C336,773 341,802 370,797"/><path d="M478,615 C478,690 458,730 468,800"/><path d="M546,615 C546,690 566,730 556,800"/><path d="M619,600 C619,680 627,728 662,754 C688,773 683,802 654,797"/></g></g>
+  <path d="M-256,700 C-171,650 -85,650 0,700 C85,750 171,750 256,700 C341,650 427,650 512,700 C597,750 683,750 768,700 C853,650 939,650 1024,700 C1109,750 1195,750 1280,700 L1280,1280 L-256,1280 Z" fill="#1A66D9"/>
+  <g fill="#5FA6FF" stroke="#5FA6FF" clip-path="url(#w)"><g transform="translate(512 520) scale(1.15) translate(-512 -520)">
+  <path d="M512,200 C610,250 668,350 668,470 L668,600 Q512,650 356,600 L356,470 C356,350 414,250 512,200 Z"/>
+  <path d="M410,330 Q320,310 300,370 Q350,405 400,400 Z"/><path d="M614,330 Q704,310 724,370 Q674,405 624,400 Z"/>
+  <g fill="none" stroke-width="40" stroke-linecap="round"><path d="M405,600 C405,680 397,728 362,754 C336,773 341,802 370,797"/><path d="M478,615 C478,690 458,730 468,800"/><path d="M546,615 C546,690 566,730 556,800"/><path d="M619,600 C619,680 627,728 662,754 C688,773 683,802 654,797"/></g></g></g>
+  <g transform="translate(512 520) scale(1.15) translate(-512 -520)"><circle cx="462" cy="480" r="34" fill="#2E86F5"/><circle cx="562" cy="480" r="34" fill="#2E86F5"/><circle cx="474" cy="468" r="11" fill="#FFFFFF"/><circle cx="574" cy="468" r="11" fill="#FFFFFF"/><circle cx="452" cy="493" r="5" fill="#FFFFFF" opacity=".8"/><circle cx="552" cy="493" r="5" fill="#FFFFFF" opacity=".8"/>
+  <path d="M482,545 Q512,570 542,545" fill="none" stroke="#2E86F5" stroke-width="16" stroke-linecap="round"/></g>
+</svg>
