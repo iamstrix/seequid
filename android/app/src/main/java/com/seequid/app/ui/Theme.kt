@@ -7,45 +7,66 @@ import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
 
-/** The launcher icon's blue. */
+/*
+ * 60-30-10: a neutral ink base, blue reserved for water (glass, overlay, history bars),
+ * and the squid's coral as the single accent for actions. Green from the icon's straw means "done".
+ */
+
+/** Water, and only water. Matches the launcher icon. */
 val Aqua = Color(0xFF2E86F5)
 val Cyan = Color(0xFF00D4F0)
-private val Deep = Color(0xFF071A2E)
-private val DeepSurface = Color(0xFF0E2640)
+/** The squid's blush; the one accent colour. */
+val Coral = Color(0xFFFF7A85)
+/** The icon's straw; success states. */
+val Leaf = Color(0xFF7ED957)
+
+private val Ink = Color(0xFF101418)
 
 private val DarkColors = darkColorScheme(
-    primary = Aqua,
-    onPrimary = Color.White,
-    secondary = Cyan,
-    background = Deep,
-    onBackground = Color(0xFFE3F2FF),
-    surface = DeepSurface,
-    onSurface = Color(0xFFE3F2FF),
-    surfaceVariant = Color(0xFF16324F),
-    onSurfaceVariant = Color(0xFFA9C6E3),
-    // Material's defaults for these are neutral grey/purple; keep every container in the deep-water family.
-    secondaryContainer = Color(0xFF16324F),
-    onSecondaryContainer = Color(0xFFE3F2FF),
-    surfaceContainerLowest = Color(0xFF0A1F36),
-    surfaceContainerLow = DeepSurface,
-    surfaceContainer = DeepSurface,
-    surfaceContainerHigh = Color(0xFF122D4A),
-    surfaceContainerHighest = Color(0xFF122D4A),
+    primary = Coral,
+    onPrimary = Color(0xFF2B0B10),
+    primaryContainer = Color(0xFF3A1E23),
+    onPrimaryContainer = Color(0xFFFFD9DC),
+    secondary = Leaf,
+    onSecondary = Color(0xFF0E2306),
+    tertiary = Aqua,
+    onTertiary = Color.White,
+    background = Ink,
+    onBackground = Color(0xFFE8ECF1),
+    surface = Ink,
+    onSurface = Color(0xFFE8ECF1),
+    surfaceVariant = Color(0xFF2A313B),
+    onSurfaceVariant = Color(0xFFA3ADBA),
+    outline = Color(0xFF4A535F),
+    // Material's defaults for these are tinted; keep every container neutral.
+    secondaryContainer = Color(0xFF2A313B),
+    onSecondaryContainer = Color(0xFFE8ECF1),
+    surfaceContainerLowest = Color(0xFF0B0E11),
+    surfaceContainerLow = Color(0xFF161B21),
+    surfaceContainer = Color(0xFF1A1F26),
+    surfaceContainerHigh = Color(0xFF1A1F26),
+    surfaceContainerHighest = Color(0xFF1F252D),
 )
 
 private val LightColors = lightColorScheme(
-    primary = Color(0xFF1E6FD9),
+    primary = Color(0xFFE5576A),
     onPrimary = Color.White,
-    secondary = Color(0xFF0097A7),
-    background = Color(0xFFF3F8FF),
-    surface = Color.White,
-    surfaceVariant = Color(0xFFE1ECFA),
-    secondaryContainer = Color(0xFFDCEBFF),
-    onSecondaryContainer = Color(0xFF0A1F36),
+    primaryContainer = Color(0xFFFFE3E6),
+    onPrimaryContainer = Color(0xFF3A1E23),
+    secondary = Color(0xFF3E9A1E),
+    onSecondary = Color.White,
+    tertiary = Aqua,
+    onTertiary = Color.White,
+    background = Color(0xFFF6F7F9),
+    surface = Color(0xFFF6F7F9),
+    surfaceVariant = Color(0xFFE6E9EE),
+    onSurfaceVariant = Color(0xFF5A6370),
+    secondaryContainer = Color(0xFFE6E9EE),
+    onSecondaryContainer = Color(0xFF1A1F26),
     surfaceContainerLow = Color.White,
     surfaceContainer = Color.White,
-    surfaceContainerHigh = Color(0xFFEAF3FF),
-    surfaceContainerHighest = Color(0xFFEAF3FF),
+    surfaceContainerHigh = Color.White,
+    surfaceContainerHighest = Color(0xFFF0F2F5),
 )
 
 @Composable

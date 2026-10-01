@@ -136,6 +136,8 @@ fun DrawScope.drawSquid(waterline: Offset, width: Float, happy: Boolean) {
                 drawCircle(Color.White.copy(alpha = 0.8f), 5f, Offset(x - 10f, 493f))
             }
         }
+        drawOval(Coral.copy(alpha = 0.7f), Offset(390f, 518f), Size(48f, 24f))
+        drawOval(Coral.copy(alpha = 0.7f), Offset(586f, 518f), Size(48f, 24f))
         drawPath(squidSmile, squidInk, style = Stroke(16f, cap = StrokeCap.Round))
     }
 }
@@ -143,7 +145,7 @@ fun DrawScope.drawSquid(waterline: Offset, width: Float, happy: Boolean) {
 @Composable
 fun WeekBars(days: List<DayTotal>, goalMl: Int, modifier: Modifier = Modifier) {
     val max = maxOf(goalMl, days.maxOfOrNull { it.totalMl } ?: 0).coerceAtLeast(1)
-    val bar = MaterialTheme.colorScheme.primary
+    val bar = Aqua
     val goalLine = MaterialTheme.colorScheme.secondary
     Column(modifier) {
         Row(

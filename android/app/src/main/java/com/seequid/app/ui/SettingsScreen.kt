@@ -168,7 +168,8 @@ private fun SectionTitle(text: String) {
         text,
         Modifier.padding(start = 4.dp, top = 20.dp, bottom = 8.dp),
         style = MaterialTheme.typography.titleSmall,
-        color = MaterialTheme.colorScheme.primary,
+        fontWeight = FontWeight.Bold,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
     )
 }
 

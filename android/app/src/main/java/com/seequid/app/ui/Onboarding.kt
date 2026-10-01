@@ -263,7 +263,7 @@ private fun PermissionPage(granted: Boolean, onGrant: () -> Unit, onStart: () ->
 @Composable
 private fun Reassurance(icon: ImageVector, text: String) {
     Row(Modifier.padding(horizontal = 16.dp, vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
-        Icon(icon, null, tint = MaterialTheme.colorScheme.primary)
+        Icon(icon, null, tint = Aqua)
         Spacer(Modifier.width(14.dp))
         Text(text, style = MaterialTheme.typography.bodyMedium)
     }
