@@ -15,7 +15,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 
 /**
- * Single source of truth for the `pro` entitlement. Everything Pro-gated —
+ * Single source of truth for the `seequid_pro` entitlement. Everything Pro-gated —
  * skins in the live overlay, history, the paywall triggers — reads [isPro].
  */
 class BillingRepository(context: Context) {
@@ -45,7 +45,7 @@ class BillingRepository(context: Context) {
             .onFailure { Log.w(TAG, "customer info fetch failed", it) }
     }
 
-    /** @return true when a restore found an active `pro` entitlement. */
+    /** @return true when a restore found an active `seequid_pro` entitlement. */
     suspend fun restore(): Result<Boolean> {
         if (!isConfigured) return Result.failure(IllegalStateException("Purchases not configured"))
         return runCatching { Purchases.sharedInstance.awaitRestore() }
@@ -60,7 +60,7 @@ class BillingRepository(context: Context) {
     private fun CustomerInfo.hasPro(): Boolean = entitlements[ENTITLEMENT_PRO]?.isActive == true
 
     companion object {
-        const val ENTITLEMENT_PRO = "pro"
+        const val ENTITLEMENT_PRO = "seequid_pro"
         private const val TAG = "SeequidBilling"
     }
 }
