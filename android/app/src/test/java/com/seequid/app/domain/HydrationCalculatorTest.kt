@@ -72,6 +72,18 @@ class HydrationCalculatorTest {
     }
 
     @Test
+    fun fullScreenScalesWithTheGoal() {
+        val defaults = HydrationSettings(dailyGoalMl = 3000)
+        assertEquals(1200, HydrationCalculator.fullScreenDeficit(defaults, 3000))
+        // Small goals keep a floor so a sip doesn't fill the whole screen.
+        assertEquals(500, HydrationCalculator.fullScreenDeficit(defaults, 1000))
+        // Every 250 ml drink moves the water: 1100 ml behind isn't pinned at 100% any more.
+        val before = HydrationCalculator.level(expectedMl = 2550, loggedMl = 1450, fullScreenDeficitMl = 1200)
+        val after = HydrationCalculator.level(expectedMl = 2550, loggedMl = 1700, fullScreenDeficitMl = 1200)
+        assertTrue(before < 1f && after < before - 0.15f)
+    }
+
+    @Test
     fun goalIsCappedForSafety() {
         assertEquals(HydrationCalculator.MAX_GOAL_ML, HydrationCalculator.clampGoal(9000))
         assertEquals(HydrationCalculator.MIN_GOAL_ML, HydrationCalculator.clampGoal(100))

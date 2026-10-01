@@ -12,8 +12,8 @@ data class HydrationSettings(
     val scheduleEnabled: Boolean = true,
     val wakeMinute: Int = 7 * 60,
     val sleepMinute: Int = 23 * 60,
-    /** Deficit (ml) at which the water reaches the top of the screen. */
-    val fullScreenDeficitMl: Int = 500,
+    /** Deficit (ml) at which the water reaches the top of the screen; null scales it to the goal. */
+    val fullScreenDeficitMl: Int? = null,
     val demoMode: Boolean = false,
     val demoStartedAt: Long = 0L,
 )
@@ -61,6 +61,19 @@ object HydrationCalculator {
         return ((minuteOfDay - wakeMinute) / span).coerceIn(0.0, 1.0)
     }
 
+    /** Never fill the screen for less than this, whatever the goal. */
+    const val MIN_FULL_SCREEN_DEFICIT_ML = 500
+    /** By default the screen is full once you're this share of the daily goal behind. */
+    const val FULL_SCREEN_GOAL_SHARE = 0.4f
+
+    /**
+     * How far behind fills the screen. Scaled to the goal so every drink visibly lowers the water:
+     * with a fixed 500 ml, a 3 L goal saturated at 100% and the first 600+ ml of drinks showed no change.
+     */
+    fun fullScreenDeficit(settings: HydrationSettings, goalMl: Int): Int =
+        settings.fullScreenDeficitMl
+            ?: (goalMl * FULL_SCREEN_GOAL_SHARE).toInt().coerceAtLeast(MIN_FULL_SCREEN_DEFICIT_ML)
+
     fun level(expectedMl: Int, loggedMl: Int, fullScreenDeficitMl: Int): Float {
         val deficit = expectedMl - loggedMl
         return (deficit.toFloat() / fullScreenDeficitMl.coerceAtLeast(1)).coerceIn(0f, 1f)
@@ -87,7 +100,7 @@ object HydrationCalculator {
             fraction = dueFraction(minute, settings.wakeMinute, settings.sleepMinute)
         }
         val expected = (goal * fraction).toInt()
-        val level = if (quiet) 0f else level(expected, loggedMl, settings.fullScreenDeficitMl)
+        val level = if (quiet) 0f else level(expected, loggedMl, fullScreenDeficit(settings, goal))
         return HydrationState(level, loggedMl, expected, goal, quiet)
     }
 }

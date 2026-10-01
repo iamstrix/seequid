@@ -1,0 +1,33 @@
+So the water currently rising has to have a value, right? We have the stat in the home screen "Drink 50ml to clear". What if it's portrayed as "Water to drink: 50ml", displayed in the mini-overlay?
+
+Yes! That connects the entire experience together.
+
+Think about the user journey:
+
+The water rises on their screen while they scroll Twitter.
+They tap the squid handle to open the quick-log sheet.
+They see the buttons: [150]  [250]  [330]  [500].
+If the sheet tells them how much they need to clear the screen, their eye immediately knows which button to tap!
+
+Phrasing: Actionable vs. Label
+Instead of the robotic label "Water to drink: 250ml", use natural, active language:
+
+"Drink ~250 ml to clear your screen" (or: "Drink ~250 ml to clear the water • 1.5 L of 2.5 L today")
+
+Why this is brilliant UX:
+Instant Guidance: If the sheet says "Drink ~250 ml to clear your screen", the user doesn't even have to think—they tap the [ 250 ] button, the water drains away, and they're back to what they were doing in 1 second.
+Pairs with the Phantom-Debt Fix: When you cap the deficit at 500 ml, the number to clear the screen will always be between 50 ml and 500 ml, which matches your four quick-log buttons (150, 250, 330, 500) perfectly!
+Tell Claude to update that subtitle in 
+
+QuickLogActivity.kt
+:
+
+kotlin
+val deficit = (it.expectedMl - it.loggedMl).coerceIn(0, 500)
+val toClear = if (deficit <= 50) "a sip" else "about ${amount(deficit)}"
+Text(
+    "Drink $toClear to clear your screen • ${amount(it.loggedMl)} of ${amount(it.goalMl)} today",
+    color = MaterialTheme.colorScheme.secondary,
+    fontWeight = FontWeight.Bold,
+)
+It turns the quick-log sheet into an intelligent, one-tap solution.
